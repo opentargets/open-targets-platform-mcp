@@ -22,6 +22,7 @@ dependencies = [
     "gql[requests]>=4.0.0",
     "pydantic>=2.12.4",
     "click>=8.0.0",
+    "jq>=1.10.0",
 ]
 
 [project.scripts]
@@ -60,6 +61,10 @@ check_untyped_defs = true
 warn_return_any = true
 warn_unused_ignores = true
 show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "jq"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
