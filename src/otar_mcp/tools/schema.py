@@ -9,13 +9,10 @@ from otar_mcp.mcp_instance import mcp
 
 @mcp.tool()
 def get_open_targets_graphql_schema() -> dict:
-    """Fetch the Open Targets GraphQL schema.
-
-    Returns the complete GraphQL schema for the OpenTargets Platform API,
-    which can be used to understand available queries, types, and fields.
+    """Retrieve the Open Targets GraphQL schema for query construction.
 
     Returns:
-        dict: Schema as a string in the GraphQL SDL format, or error information
+        dict: Schema string in format {'schema': '...'} containing GraphQL type definitions or error message.
     """
     try:
         schema = fetch_graphql_schema(config.api_endpoint)

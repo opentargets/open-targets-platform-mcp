@@ -223,10 +223,9 @@ EXAMPLE_QUERIES = {
 
 @mcp.tool()
 def get_open_targets_query_examples() -> dict:
-    """Get example GraphQL queries for the Open Targets API.
+    """Retrieve example GraphQL queries for the Open Targets API. Examples demonstrate common use cases.
 
-    Returns a dictionary of named example queries that can be used with the
-    query_open_targets_graphql tool. These examples demonstrate common use cases
-    for retrieving data about targets, diseases, drugs, and their associations.
+    Returns:
+        dict: Example queries mapped by category (informationForTarget, drugsForTarget, associatedDiseases, etc.) with GraphQL query strings.
     """
     return EXAMPLE_QUERIES
