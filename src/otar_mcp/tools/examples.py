@@ -1,6 +1,6 @@
 """Tool for providing example GraphQL queries for the OpenTargets API."""
 
-from otar_mcp.server import mcp
+from otar_mcp.mcp_instance import mcp
 
 EXAMPLE_QUERIES = {
     "informationForTargetByEnsemblId": """

@@ -6,7 +6,7 @@ from pydantic import Field
 
 from otar_mcp.client import execute_graphql_query
 from otar_mcp.config import config
-from otar_mcp.server import mcp
+from otar_mcp.mcp_instance import mcp
 
 
 @mcp.tool()
