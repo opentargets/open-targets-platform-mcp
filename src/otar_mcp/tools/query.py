@@ -29,6 +29,10 @@ def query_open_targets_graphql(
     query syntax, available fields, required variables, and structure. Use the examples as
     templates for constructing your queries.
 
+    ALWAYS use a jq filter to return ONLY the specific information requested by the user.
+    This achieves parsimony by reducing token consumption and response size. Never return
+    the full API response when only specific fields are needed.
+
     Args:
         query_string: GraphQL query starting with 'query' keyword
         variables: Optional dict or JSON string with query variables
