@@ -1,0 +1,38 @@
+# Query Name: ClinGenSummaryFragment
+# Entity Type: evidence
+# Description:
+# Retrieves the count of ClinGen evidence entries for a target-disease
+#  association. Used to display summary statistics showing the number of
+#  genetic association evidence from the ClinGen datasource.
+# Variables:
+# efoId: String! (Example: EFO_0000508), ensgId: String! (Example:
+#  ENSG00000198947)
+# Pagination Behavior: Full results
+# Notes:
+# Originally a fragment, converted to standalone query. Query successfully
+#  tested with BRAF (ENSG00000157764) + melanoma (EFO_0000756), returned
+#  count=0 (no ClinGen data for this pair). Also tested with DMD
+#  (ENSG00000198947) + cardiomyopathy (EFO_0000508), returned count=1. Uses
+#  size=0 parameter to retrieve only count without fetching evidence rows for
+#  efficient summary display. Returns total number of ClinGen evidence entries
+#  without pagination. Used by Summary component in ClinGen section to display
+#  entry count. ClinGen data is sparse and primarily covers genetic disease
+#  associations.
+#
+# Last Updated: 2025-11-21
+query ClinGenSummaryFragment($efoId: String!, $ensgId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    clingenSummary: evidences(
+      ensemblIds: [$ensgId]
+      enableIndirect: true
+      datasourceIds: ["clingen"]
+      size: 0
+    ) {
+      count
+    }
+  }
+}

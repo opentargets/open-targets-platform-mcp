@@ -1,0 +1,44 @@
+# Query Name: ProgenySummaryFragment
+# Entity Type: evidence
+# Description:
+# Retrieves the count of PROGENy pathway evidence entries for a target-disease
+#  association. Used by Summary component to display evidence count without
+#  loading full evidence details. PROGENy provides pathway perturbation
+#  experiment evidence.
+# Variables:
+# ensemblId: String! (Example: ENSG00000157764), efoId: String! (Example:
+#  EFO_0000756)
+# Pagination Behavior: Full results
+# Notes:
+# Originally a fragment, converted to standalone query. Query successfully
+#  tested with BRAF (ENSG00000157764) + melanoma (EFO_0000756), returned
+#  count=0. Also tested with TP53 (ENSG00000141510) + breast cancer
+#  (EFO_0000305), returned count=1. Uses size=0 parameter to retrieve only
+#  count without fetching evidence rows for efficient summary display. Returns
+#  total number of PROGENy pathway evidence entries without pagination. Uses
+#  enableIndirect=true to include indirect evidence associations.
+#  datasourceIds=['progeny'] targets PROGENy pathway activity data. Used by
+#  Summary component in Progeny section to display entry count. Related to
+#  full ProgenyQuery (sectionQuery.gql) which fetches detailed evidence
+#  including pathways, diseaseFromSource, and p-values with pagination support
+#  (size parameter defaults to 3500). PROGENy data coverage is sparse - only
+#  available for select target-disease pairs with pathway perturbation
+#  evidence.
+#
+# Last Updated: 2025-11-21
+query ProgenySummaryFragment($ensemblId: String!, $efoId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    progeny: evidences(
+      ensemblIds: [$ensemblId]
+      enableIndirect: true
+      datasourceIds: ["progeny"]
+      size: 0
+    ) {
+      count
+    }
+  }
+}

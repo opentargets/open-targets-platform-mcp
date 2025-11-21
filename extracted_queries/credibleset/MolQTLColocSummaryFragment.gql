@@ -1,0 +1,29 @@
+# Query Name: MolQTLColocSummaryFragment
+# Entity Type: credibleset
+# Description:
+# Fragment that fetches molecular QTL colocalization summary count for a
+#  credible set. Returns the total number of molecular QTL studies (scsqtl,
+#  sceqtl, scpqtl, sctuqtl, sqtl, eqtl, pqtl, tuqtl) that colocalize with the
+#  given credible set.
+# Variables: studyLocusId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Originally a fragment, converted to standalone query. Query successfully
+#  tested with studyLocusId=7d68cc9c70351c9dbd2a2c0c145e555d. Returns count=14
+#  molecular QTL colocalizations across study types (scsqtl, sceqtl, scpqtl,
+#  sctuqtl, sqtl, eqtl, pqtl, tuqtl). Used by Summary component in MolQTLColoc
+#  section to display summary statistics. Uses fixed page size of 1 since only
+#  count is needed.
+#
+# Last Updated: 2025-11-21
+query MolQTLColocSummaryFragment($studyLocusId: String!) {
+  # Return a Credible Set
+  credibleSet(studyLocusId: $studyLocusId) {
+    molqtlcolocalisation: colocalisation(
+      studyTypes: [scsqtl, sceqtl, scpqtl, sctuqtl, sqtl, eqtl, pqtl, tuqtl]
+      page: { size: 1, index: 0 }
+    ) {
+      count
+    }
+  }
+}

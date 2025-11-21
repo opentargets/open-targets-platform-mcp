@@ -1,0 +1,70 @@
+# Query Name: DiseaseAssociationsQuery
+# Entity Type: disease
+# Description:
+# Fetches paginated, filtered, and sorted target associations for a specific
+#  disease
+# Variables:
+# id: String!, index: Int!, size: Int!, sortBy: String!, enableIndirect:
+#  Boolean!, datasources: [DatasourceSettingsInput!], rowsFilter: [String!],
+#  facetFilters: [String!], entitySearch: String!
+# Pagination Behavior: Paginated (returns 25/page, total varies)
+# Notes:
+# Query executes successfully. Returns count=2961 for rheumatoid arthritis.
+#  Empty rows may require specific datasource configuration.
+#
+# Last Updated: 2025-11-21
+query DiseaseAssociationsQuery(
+  $id: String!
+  $index: Int!
+  $size: Int!
+  $sortBy: String!
+  $enableIndirect: Boolean!
+  $datasources: [DatasourceSettingsInput!]
+  $rowsFilter: [String!]
+  $facetFilters: [String!]
+  $entitySearch: String!
+) {
+  # Return a Disease
+  disease(efoId: $id) {
+    # Open Targets disease id
+    id
+    # Disease name
+    name
+    # associations on the fly
+    associatedTargets(
+      page: { index: $index, size: $size }
+      orderByScore: $sortBy
+      enableIndirect: $enableIndirect
+      datasources: $datasources
+      Bs: $rowsFilter
+      facetFilters: $facetFilters
+      BFilter: $entitySearch
+    ) {
+      count
+      # Associated Targets using (On the fly method)
+      rows {
+        # Target
+        target {
+          # Open Targets target id
+          id
+          # HGNC approved symbol
+          approvedSymbol
+          # Approved gene name
+          approvedName
+          # Factors influencing target-specific properties informative in a target prioritisation strategy. Values range from -1 (deprioritised) to 1 (prioritised).
+          prioritisation {
+            items {
+              key
+              value
+            }
+          }
+        }
+        score
+        datasourceScores {
+          componentId: id
+          score
+        }
+      }
+    }
+  }
+}

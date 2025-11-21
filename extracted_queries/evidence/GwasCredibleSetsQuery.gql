@@ -1,0 +1,89 @@
+# Query Name: GwasCredibleSetsQuery
+# Entity Type: evidence
+# Description:
+# Retrieves GWAS credible sets evidence linking a target to a disease,
+#  including variant information, study details, fine-mapping metrics (method,
+#  confidence), statistical measures (p-values, beta), and L2G (locus-to-gene)
+#  scores
+# Variables:
+# ensemblId: String! (Example: ENSG00000162594 for IL23R), efoId: String!
+#  (Example: EFO_0003767 for IBD), size: Int! (Example: 10), cursor: String
+#  (optional)
+# Pagination Behavior: Paginated (cursor-based, returns count and cursor fields)
+# Notes:
+# Query executes successfully. Tested with IL23R (ENSG00000162594) +
+#  inflammatory bowel disease (EFO_0003767), returned count=110 total credible
+#  sets. Returns comprehensive GWAS fine-mapping data including studyLocusId,
+#  lead variant details (id, chromosome, position, alleles), study metadata
+#  (traitFromSource, projectId, publication info, sample size), statistical
+#  measures (pValueMantissa/Exponent, beta), fine-mapping details
+#  (finemappingMethod like SuSiE-inf, confidence levels like 'SuSiE
+#  fine-mapped credible set with out-of-sample LD'), and L2G scores for
+#  target-variant linkage prediction. Cursor-based pagination confirmed
+#  working. Uses enableIndirect=true to include related disease evidence.
+#  Default size in app: 3500 (sectionsBaseSizeQuery). Sample results included
+#  credible sets for Crohn's disease, IBD, and ulcerative colitis with L2G
+#  scores of 0.95 for the IL23R gene region.
+#
+# Last Updated: 2025-11-21
+query GwasCredibleSetsQuery($ensemblId: String!, $efoId: String!, $size: Int!) {
+  # Return a Target
+  target(ensemblId: $ensemblId) {
+    # HGNC approved symbol
+    approvedSymbol
+  }
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # Disease name
+    name
+    # The complete list of all possible datasources
+    gwasCredibleSets: evidences(
+      ensemblIds: [$ensemblId]
+      enableIndirect: true
+      datasourceIds: ["gwas_credible_sets"]
+      size: $size
+    ) {
+      count
+      rows {
+        # Disease evidence
+        disease {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+        }
+        credibleSet {
+          studyLocusId
+          # Gwas study
+          study {
+            traitFromSource
+            # The study identifier
+            id
+            # The project identifier
+            projectId
+            publicationFirstAuthor
+            publicationDate
+            pubmedId
+            nSamples
+          }
+          variant {
+            id
+            chromosome
+            position
+            referenceAllele
+            alternateAllele
+          }
+          pValueMantissa
+          pValueExponent
+          beta
+          finemappingMethod
+          confidence
+        }
+        # Evidence score
+        score
+      }
+    }
+  }
+}

@@ -1,0 +1,68 @@
+# Query Name: impcQuery
+# Entity Type: evidence
+# Description:
+# Retrieves detailed IMPC mouse model evidence for target-disease associations
+#  with phenotype and genetic background data
+# Variables: ensemblId: String!, efoId: String!, size: Int!, cursor: String
+# Pagination Behavior: Cursor-based pagination
+# Notes:
+# Returns detailed evidence rows with disease/target variantEffect
+#  directionOnTrait biologicalModel data
+#  diseaseModelAssociatedModelPhenotypes/HumanPhenotypes and score. Uses
+#  cursor-based pagination. Successfully tested with EFO_0000685 and
+#  ENSG00000157764.
+#
+# Last Updated: 2025-11-21
+query impcQuery($ensemblId: String!, $efoId: String!, $size: Int!, $cursor: String) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    impc: evidences(
+      ensemblIds: [$ensemblId]
+      enableIndirect: true
+      datasourceIds: ["impc"]
+      size: $size
+      cursor: $cursor
+    ) {
+      cursor
+      count
+      rows {
+        # Disease evidence
+        disease {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+        }
+        # Target evidence
+        target {
+          # Open Targets target id
+          id
+          # HGNC approved symbol
+          approvedSymbol
+        }
+        # Variant effect
+        variantEffect
+        # Direction On Trait
+        directionOnTrait
+        diseaseFromSource
+        biologicalModelGeneticBackground
+        biologicalModelAllelicComposition
+        biologicalModelId
+        diseaseModelAssociatedModelPhenotypes {
+          id
+          label
+        }
+        diseaseModelAssociatedHumanPhenotypes {
+          id
+          label
+        }
+        # Evidence score
+        score
+        targetInModel
+      }
+    }
+  }
+}

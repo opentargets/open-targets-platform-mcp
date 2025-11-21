@@ -1,0 +1,24 @@
+# Query Name: Locus2GeneQueryFragment
+# Entity Type: credibleset
+# Description:
+# Fetches locus-to-gene predictions count for a credible set summary display.
+#  Used by the Summary component to show the number of L2G predictions without
+#  loading the full prediction data.
+# Variables: studyLocusId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Originally a fragment, converted to standalone query. Query successfully
+#  tested with 7d68cc9c70351c9dbd2a2c0c145e555d, returned count=3. Lightweight
+#  query for summary display, returns only the count of L2G predictions. Full
+#  prediction details are fetched by Locus2GeneQuery.gql when section is
+#  expanded.
+#
+# Last Updated: 2025-11-21
+query Locus2GeneQueryFragment($studyLocusId: String!) {
+  # Return a Credible Set
+  credibleSet(studyLocusId: $studyLocusId) {
+    l2GPredictions {
+      count
+    }
+  }
+}

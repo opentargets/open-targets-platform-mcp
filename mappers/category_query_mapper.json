@@ -1,0 +1,230 @@
+{
+  "cancer-genomics": [
+    "CancerBiomarkersEvidenceFragment",
+    "CancerBiomarkersQuery",
+    "CancerGeneCensusQuery",
+    "CancerGeneCensusSummaryFragment",
+    "CancerHallmarksSummaryFragment",
+    "HallmarksQuery",
+    "IntOgenQuery",
+    "IntOgenSummaryFragment"
+  ],
+  "clinical-genetics": [
+    "ClinGenSummaryFragment",
+    "ClingenQuery",
+    "ClinvarQuery",
+    "Gene2PhenotypeQuery",
+    "Gene2PhenotypeSummaryFragment",
+    "GenomicsEnglandQuery",
+    "GenomicsEnglandSummaryFragment",
+    "OrphanetQuery",
+    "OrphanetSummaryFragment"
+  ],
+  "comparative-genomics": [
+    "CompGenomicsQuery",
+    "CompGenomicsSummaryFragment"
+  ],
+  "credible-sets": [
+    "EvidenceGWASCredibleSetsSummaryFragment",
+    "GWASColocQuery",
+    "GWASColocSummaryFragment",
+    "GwasCredibleSetsQuery",
+    "Locus2GeneQuery",
+    "Locus2GeneQueryFragment",
+    "MolQTLColocQuery",
+    "MolQTLColocSummaryFragment",
+    "StudyGWASCredibleSetsQuery",
+    "StudyGWASCredibleSetsSummaryFragment",
+    "TargetQTLCredibleSetsSummary",
+    "VariantGWASCredibleSetsQuery",
+    "VariantGWASCredibleSetsSummary",
+    "VariantsQuery",
+    "VariantsSummaryFragment"
+  ],
+  "disease-associations": [
+    "DiseaseAssociationsQuery",
+    "TargetAssociationsQuery",
+    "AssociatedTargetsQuery",
+    "DiseaseAnnotation",
+    "TargetAnnotation",
+    "TargetAssocs",
+    "TargetDiseaseEvidence"
+  ],
+  "disease-phenotypes": [
+    "OntologyQuery",
+    "OntologySummaryFragment",
+    "PhenotypesQuery",
+    "PhenotypesSummaryFragment"
+  ],
+  "drug-indications": [
+    "DrugAnnotation",
+    "DiseaseKnownDrugsQuery",
+    "DiseaseKnownDrugsSummary",
+    "DrugKnownDrugsQuery",
+    "DrugKnownDrugsSummaryQuery",
+    "IndicationsQuery",
+    "IndicationsSummaryFragment",
+    "TargetKnownDrugsQuery",
+    "TargetKnownDrugsSummaryFragment"
+  ],
+  "drug-mechanisms": [
+    "ChemblQuery",
+    "ChemblSummaryFragment",
+    "LinkedTargetsQuery",
+    "LinkedTargetsSummaryFragment",
+    "MechanismsOfActionQuery",
+    "MechanismsOfActionSummaryFragment"
+  ],
+  "drug-safety": [
+    "AdverseEventsQuery",
+    "AdverseEventsSummaryFragment",
+    "DrugWarningsQuery",
+    "DrugWarningsSummaryFragment"
+  ],
+  "entity-profiles": [
+    "CredibleSetPageQuery",
+    "CredibleSetProfileHeaderFragment",
+    "DiseasePageQuery",
+    "DiseaseProfileHeaderFragment",
+    "DrugAnnotation",
+    "DrugPageQuery",
+    "DrugProfileHeaderFragment",
+    "EvidencePageQuery",
+    "StudyPageQuery",
+    "StudyProfileHeaderQuery",
+    "TargetPageQuery",
+    "TargetProfileHeaderFragment",
+    "VariantPageQuery",
+    "VariantProfileHeaderFragment"
+  ],
+  "entity-search": [
+    "DiseaseSimilarEntitiesQuery",
+    "DrugSimilarEntitiesQuery",
+    "EntitiesSummaryFragment",
+    "SearchAnnotation",
+    "SearchAssocs",
+    "SearchPageQuery",
+    "TargetSimilarEntitiesQuery"
+  ],
+  "experimental-models": [
+    "ChemicalProbesQuery",
+    "ChemicalProbesSummaryFragment",
+    "CrisprQuery",
+    "CrisprScreenQuery",
+    "CrisprScreenSummaryFragment",
+    "CrisprSummaryFragment",
+    "DepmapQuery",
+    "DepmapSummaryFragment",
+    "IMPCSummaryFragment",
+    "MousePhenotypes",
+    "MousePhenotypesSummary",
+    "OTCrisprQuery",
+    "OTCrisprSummaryFragment",
+    "ImpcQuery"
+  ],
+  "functional-genomics": [
+    "ExpressionAtlasQuery",
+    "ExpressionAtlasSummary",
+    "ExpressionAtlasSummaryFragment",
+    "ExpressionQuery",
+    "ExpressionSummaryFragment",
+    "GeneOntologyQuery",
+    "GeneOntologySummaryFragment",
+    "Pathways",
+    "PathwaysSummary",
+    "ProgenyQuery",
+    "ProgenySummaryFragment",
+    "ReactomePathwaysSummaryFragment",
+    "SlapEnrichQuery",
+    "SlapEnrichSummaryFragment",
+    "SysBioQuery",
+    "SysBioSummaryFragment",
+    "ReactomeQuery"
+  ],
+  "genetic-constraint": [
+    "GeneBurdenQuery",
+    "GeneBurdenSummaryFragment",
+    "GeneticConstraintQuery",
+    "GeneticConstraintFragment"
+  ],
+  "gwas-associations": [
+    "DiseaseGWASStudiesQuery",
+    "GwasCredibleSetsQuery",
+    "SharedTraitStudiesQuery",
+    "SharedTraitStudiesSummaryFragment",
+    "StudyGWASStudiesQuery"
+  ],
+  "literature-evidence": [
+    "DiseaseBibliography",
+    "DrugBibliography",
+    "EuropePMCQuery",
+    "EuropePmcSummaryFragment",
+    "UniprotLiteratureQuery",
+    "UniprotLiteratureSummaryFragment"
+  ],
+  "molecular-interactions": [
+    "InteractionsSectionQuery",
+    "InteractionsSectionQuery_String",
+    "InteractionsStatsQuery",
+    "MolecularInteractionsSummary"
+  ],
+  "pharmacogenomics": [
+    "DrugPharmacogenomicsQuery",
+    "PharmacogenomicsSummaryFragment",
+    "TargetPharmacogenomicsQuery",
+    "TargetPharmacogenomicsSummary",
+    "VariantPharmacogenomicsQuery",
+    "VariantPharmacogenomicsSummary"
+  ],
+  "protein-structure": [
+    "MolecularStructureQuery",
+    "ProtVistaQuery",
+    "SubcellularLocation",
+    "SubcellularLocationFragment",
+    "TargetMolecularStructureSummary",
+    "VariantMolecularStructureSummary"
+  ],
+  "qtl-genetics": [
+    "QTLCredibleSetsSummary",
+    "QTLCredibleSetsSummaryFragment",
+    "StudyQTLCredibleSetsQuery",
+    "TargetQTLCredibleSetsQuery",
+    "TargetQTLCredibleSetsSummary",
+    "VariantQTLCredibleSetsQuery"
+  ],
+  "target-safety": [
+    "Safety",
+    "SafetySummary"
+  ],
+  "target-tractability": [
+    "TractabilityQuery",
+    "TractabilitySummary"
+  ],
+  "validation-evidence": [
+    "OTEncoreQuery",
+    "OTEncoreSummaryFragment",
+    "OTProjectsQuery",
+    "OTProjectsSummaryFragment",
+    "OTValidationSummaryFragment",
+    "OTValidationQuery"
+  ],
+  "variant-annotation": [
+    "EVAQuery",
+    "EVASummary",
+    "EVASummaryFragment",
+    "EvaSomaticQuery",
+    "EvaSomaticSummaryFragment",
+    "IntervalsQuery",
+    "IntervalsSummaryFragment",
+    "OverlappingVariantsQuery",
+    "OverlappingVariantsSummary",
+    "UniProtVariantsQuery",
+    "UniProtVariantsSummaryQuery",
+    "UniprotVariantsQuery",
+    "UniprotVariantsSummaryFragment",
+    "VariantEffectPredictorQuery",
+    "VariantEffectPredictorSummary",
+    "VariantEffectQuery",
+    "VariantEffectSummary"
+  ]
+}

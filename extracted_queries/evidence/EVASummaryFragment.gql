@@ -1,0 +1,28 @@
+# Query Name: EVASummaryQuery
+# Entity Type: evidence
+# Description:
+# Retrieves evidence count from EVA datasource for a target-disease pair used
+#  to determine section visibility
+# Variables: ensemblId: String!, efoId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Query successfully tested with ENSG00000157764 (BRAF) and EFO_0000685,
+#  returns count of EVA evidence using size=0 for summary.
+#
+# Last Updated: 2025-11-21
+query EVASummaryQuery($ensgId: String!, $efoId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    eva: evidences(
+      ensemblIds: [$ensgId]
+      enableIndirect: true
+      datasourceIds: ["eva"]
+      size: 0
+    ) {
+      count
+    }
+  }
+}

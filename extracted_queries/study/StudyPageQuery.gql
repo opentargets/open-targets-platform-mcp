@@ -1,0 +1,41 @@
+# Query Name: StudyPageQuery
+# Entity Type: study
+# Description:
+# Fetches core study information including study metadata, background traits,
+#  associated target, and diseases for a given study.
+# Variables: studyId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Query successfully tested with GCST90002357, returning study ID, study type
+#  (gwas), project ID (GCST), background traits, target, and associated
+#  diseases (platelet count).
+#
+# Last Updated: 2025-11-21
+query StudyPageQuery($studyId: String!) {
+  # Return a Study
+  study(studyId: $studyId) {
+    # The study identifier
+    id
+    # The study type
+    studyType
+    # The project identifier
+    projectId
+    backgroundTraits {
+      # Open Targets disease id
+      id
+      # Disease name
+      name
+    }
+    # Target
+    target {
+      # Open Targets target id
+      id
+    }
+    diseases {
+      # Open Targets disease id
+      id
+      # Disease name
+      name
+    }
+  }
+}

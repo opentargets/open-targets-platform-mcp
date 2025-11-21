@@ -1,0 +1,81 @@
+# Query Name: GenomicsEnglandQuery
+# Entity Type: evidence
+# Description:
+# Fetches Genomics England evidence for a target-disease association,
+#  including panel information, confidence levels, allelic requirements,
+#  cohort phenotypes, and literature references from the Genomics England
+#  PanelApp
+# Variables:
+# ensemblId: String! (Example: ENSG00000198947 for DMD), efoId: String!
+#  (Example: EFO_0000508), size: Int! (Example: 10)
+# Pagination Behavior: Paginated (returns X/page based on size parameter, total varies)
+# Notes:
+# Query executes successfully. Tested with DMD (ENSG00000198947) +
+#  cardiomyopathy/genetic disorder (EFO_0000508), returned count=21 with 10
+#  rows retrieved. Includes comprehensive gene panel data: disease mapping
+#  (MONDO IDs/names like Duchenne muscular dystrophy MONDO_0010679, Becker
+#  muscular dystrophy MONDO_0010311, dilated cardiomyopathy 3B MONDO_0010542),
+#  diseaseFromSource (panel names in UPPER CASE or Title Case),
+#  cohortPhenotypes arrays (OMIM codes with phenotype names like 'DUCHENNE
+#  MUSCULAR DYSTROPHY 310200', 'CARDIOMYOPATHY DILATED X-LINKED TYPE 3B
+#  302045'), confidence levels (green/amber/red classification from GEL
+#  PanelApp), allelicRequirements (inheritance patterns like 'X-LINKED:
+#  hemizygous mutation in males, biallelic mutations in females'),
+#  studyOverview (panel categories like 'DDG2P', 'Paediatric or syndromic
+#  cardiomyopathy', 'Limb girdle muscular dystrophies, myofibrillar myopathies
+#  and distal myopathies'), studyId (panel identifiers like '484', '285',
+#  '749'), and literature arrays with PMID references (can be null). Genomics
+#  England specializes in rare disease gene panels curated for NHS clinical
+#  diagnostics and has sparse coverage for common cancers (BRAF+melanoma
+#  returns count=0). Uses standard pagination with size parameter and returns
+#  count field for total available rows. enableIndirect=true allows related
+#  disease matches. Related to GenomicsEnglandSummaryFragment.gql which
+#  fetches only count for summary display.
+#
+# Last Updated: 2025-11-21
+query GenomicsEnglandQuery($ensemblId: String!, $efoId: String!, $size: Int!) {
+  # Return a Target
+  target(ensemblId: $ensemblId) {
+    # HGNC approved symbol
+    approvedSymbol
+  }
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # Disease name
+    name
+    # The complete list of all possible datasources
+    genomicsEngland: evidences(
+      ensemblIds: [$ensemblId]
+      enableIndirect: true
+      datasourceIds: ["genomics_england"]
+      size: $size
+    ) {
+      count
+      rows {
+        # Disease evidence
+        disease {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+        }
+        # Target evidence
+        target {
+          # HGNC approved symbol
+          approvedSymbol
+        }
+        diseaseFromSource
+        cohortPhenotypes
+        confidence
+        allelicRequirements
+        studyOverview
+        studyId
+        confidence
+        # list of pub med publications ids
+        literature
+      }
+    }
+  }
+}

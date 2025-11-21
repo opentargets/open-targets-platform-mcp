@@ -1,0 +1,35 @@
+# Query Name: StudyGWASStudiesQuery
+# Entity Type: study
+# Description:
+# Retrieves GWAS studies filtered by disease IDs including study metadata
+#  sample sizes cohorts publication information and LD population structure.
+# Variables: diseaseIds: [String!]
+# Pagination Behavior: Full results
+# Notes:
+# Query successfully tested with EFO_0000685 (rheumatoid arthritis), returned
+#  count=129 GWAS studies.
+#
+# Last Updated: 2025-11-21
+query StudyGWASStudiesQuery {
+  # Return a studies
+  studies(diseaseIds: "EFO_0000685") {
+    count
+    rows {
+      # The study identifier
+      id
+      # The project identifier
+      projectId
+      traitFromSource
+      publicationFirstAuthor
+      publicationDate
+      publicationJournal
+      nSamples
+      cohorts
+      pubmedId
+      ldPopulationStructure {
+        ldPopulation
+        relativeSampleSize
+      }
+    }
+  }
+}

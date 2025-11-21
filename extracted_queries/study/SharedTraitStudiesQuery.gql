@@ -1,0 +1,60 @@
+# Query Name: SharedTraitStudiesQuery
+# Entity Type: study
+# Description:
+# Fetches GWAS studies that share traits/diseases with a given set of disease
+#  IDs. Returns related studies based on shared phenotypes from GWAS Catalog
+#  and FinnGen sources, including publication metadata, sample sizes, cohorts,
+#  and LD population structure.
+# Variables:
+# diseaseIds: [String!]! (Example: ['EFO_0004309']), size: Int! (Example:
+#  500), index: Int! (Example: 0)
+# Pagination Behavior: Paginated (returns 500/page by default, total varies)
+# Notes:
+# Query successfully tested. Extracted diseaseIds ['EFO_0004309'] from study
+#  GCST90002357 (platelet count), returned count=89 studies sharing the trait
+#  (25 rows with size=25, 39 rows for page 2 with size=50). Uses offset-based
+#  pagination with size and index parameters. Default size is 500
+#  (table5HChunkSize constant). Returns count field showing total shared
+#  studies and rows array with paginated results. Query uses root-level
+#  studies() resolver filtered by diseaseIds array. Response includes study
+#  identification (id, traitFromSource, projectId), disease associations array
+#  (diseases with id, name), publication metadata (publicationFirstAuthor,
+#  publicationDate, publicationJournal, pubmedId), sample information
+#  (nSamples, cohorts array), and ldPopulationStructure array (ldPopulation
+#  codes like 'eas'/'nfe', relativeSampleSize percentages). Example:
+#  GCST90018969 for 'Platelet count' with 499097 samples from BBJ+UKB cohorts,
+#  LD structure 29.8% EAS + 70.2% NFE. No fragments to inline. Used with
+#  useBatchQuery for automatic pagination. UI filters out current study ID
+#  from results. Exports to CSV. Related to
+#  SharedTraitStudiesSummaryFragment.gql which fetches only count.
+#
+# Last Updated: 2025-11-21
+query SharedTraitStudiesQuery($diseaseIds: [String!]!, $size: Int!, $index: Int!) {
+  # Return a studies
+  sharedTraitStudies: studies(diseaseIds: $diseaseIds, page: { size: $size, index: $index }) {
+    count
+    rows {
+      # The study identifier
+      id
+      traitFromSource
+      # The project identifier
+      projectId
+      diseases {
+        # Open Targets disease id
+        id
+        # Disease name
+        name
+      }
+      publicationFirstAuthor
+      publicationDate
+      publicationJournal
+      nSamples
+      cohorts
+      ldPopulationStructure {
+        ldPopulation
+        relativeSampleSize
+      }
+      pubmedId
+    }
+  }
+}

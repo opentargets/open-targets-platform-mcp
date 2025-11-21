@@ -1,0 +1,23 @@
+# Query Name: PhenotypesSummaryQuery
+# Entity Type: disease
+# Description: Retrieves phenotype count from Human Phenotype Ontology index for a disease
+# Variables: efoId: String!
+# Pagination Behavior: Paginated (page parameters)
+# Notes:
+# Summary query using page index: 0 and size: 0 to return only count.
+#  Successfully tested with EFO_0000685 (rheumatoid arthritis) returning
+#  count=16.
+#
+# Last Updated: 2025-11-21
+query PhenotypesSummaryQuery($efoId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # Phenotype from HPO index
+    phenotypes(page: { index: 0, size: 0 }) {
+      # Number of entries
+      count
+    }
+  }
+}

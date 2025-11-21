@@ -1,0 +1,39 @@
+# Query Name: VariantEffectPredictorSummary
+# Entity Type: variant
+# Description:
+# Retrieves canonical transcript information for a variant to determine if
+#  transcript consequences should be displayed in the summary.
+# Variables: variantId: String! (Example: 19_44908822_C_T)
+# Pagination Behavior: Full results
+# Notes:
+# Originally a fragment (VariantEffectPredictorSummaryFragment on Variant),
+#  converted to standalone query. Query successfully tested with variants
+#  19_44908822_C_T (rs7412, returned 61 transcript consequences) and
+#  1_113761186_C_A (returned 21 transcript consequences). No pagination -
+#  returns all transcript consequences in single response as array. Response
+#  includes variant object with transcriptConsequences array where each
+#  element contains isEnsemblCanonical (boolean indicating whether this is an
+#  Ensembl canonical transcript). Used in Summary.tsx component via
+#  usePlatformApi to determine section visibility via hasData function which
+#  checks if transcriptConsequences?.length > 0. This minimal query
+#  efficiently checks data availability for the Variant Effect Predictor (VEP)
+#  section without fetching full transcript consequence details. The section
+#  displays predicted effects of variants on gene transcripts including amino
+#  acid changes, consequence types (missense, synonymous, etc.), impact
+#  ratings, and distances from regulatory features. Fragment inlined with
+#  query wrapper and variantId variable added. No nested fragments. Related to
+#  VariantEffectPredictorQuery.gql which provides full transcript consequence
+#  details including gene symbols, variant consequences, amino acid changes,
+#  UniProt accessions, codons, distances from footprints/TSS, impact scores,
+#  consequence scores, transcript indices, LOFTEE predictions, SIFT
+#  predictions, and PolyPhen predictions for the detailed table display.
+#
+# Last Updated: 2025-11-21
+query VariantEffectPredictorSummary($variantId: String!) {
+  # Return a Variant
+  variant(variantId: $variantId) {
+    transcriptConsequences {
+      isEnsemblCanonical
+    }
+  }
+}

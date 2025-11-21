@@ -1,0 +1,51 @@
+# Query Name: CrisprQuery
+# Entity Type: evidence
+# Description:
+# Fetches CRISPR evidence for a target-disease association, including cancer
+#  cell line data and priority scores from CRISPR screening experiments.
+# Variables:
+# ensemblId: String! (Example: ENSG00000157764), efoId: String! (Example:
+#  EFO_0000756), size: Int! (Example: 3500)
+# Pagination Behavior: Paginated (returns size/page, total varies)
+# Notes:
+# Query executes successfully. Tested with BRAF (ENSG00000157764) + melanoma
+#  (EFO_0000756), returned count=1 evidence entry with 50 cancer cell lines
+#  (SK-MEL-30, A2058, etc.), diseaseFromSource='melanoma',
+#  resourceScore=71.45143, and literature references. Uses standard pagination
+#  with size parameter (default 3500 in app). Returns count field and rows
+#  array for pagination support.
+#
+# Last Updated: 2025-11-21
+query CrisprQuery($ensemblId: String!, $efoId: String!, $size: Int!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    crisprSummary: evidences(
+      ensemblIds: [$ensemblId]
+      enableIndirect: true
+      datasourceIds: ["crispr"]
+      size: $size
+    ) {
+      count
+      rows {
+        # Disease evidence
+        disease {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+        }
+        diseaseCellLines {
+          name
+          id
+        }
+        diseaseFromSource
+        resourceScore
+        # list of pub med publications ids
+        literature
+      }
+    }
+  }
+}

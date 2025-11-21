@@ -1,0 +1,29 @@
+# Query Name: EvidenceGWASCredibleSetsSummaryFragment
+# Entity Type: evidence
+# Description:
+# Retrieves the count of GWAS credible sets evidence for a target-disease
+#  pair. Used to determine if the GWAS Credible Sets section should be
+#  displayed in evidence view.
+# Variables: ensgId: String!, efoId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Query successfully tested with ENSG00000157764 (BRAF) and EFO_0000685
+#  (rheumatoid arthritis), returned count of GWAS credible set evidences.
+#
+# Last Updated: 2025-11-21
+query EvidenceGWASCredibleSetsSummaryFragment($ensgId: String!, $efoId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    gwasCredibleSets: evidences(
+      ensemblIds: [$ensgId]
+      enableIndirect: true
+      datasourceIds: ["gwas_credible_sets"]
+      size: 0
+    ) {
+      count
+    }
+  }
+}

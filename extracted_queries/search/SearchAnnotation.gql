@@ -1,0 +1,26 @@
+# Query Name: searchEntity
+# Entity Type: search
+# Description:
+# Multi-entity search across targets diseases drugs and studies returning
+#  matching entities
+# Variables: queryString: String!
+# Pagination Behavior: Full results
+# Notes:
+# Returns total count and hits array with id entity type and description for
+#  all matching entities. Successfully tested with queryString=BRAF" returning
+#  total=1350."
+#
+# Last Updated: 2025-11-21
+query searchEntity($queryString: String!) {
+  # Multi entity search
+  search(queryString: $queryString) {
+    # Total number or results given a entity filter
+    total
+    # Return combined
+    hits {
+      id
+      entity
+      description
+    }
+  }
+}

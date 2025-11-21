@@ -1,0 +1,19 @@
+# Query Name: QTLCredibleSetsSummaryQuery
+# Entity Type: study
+# Description: Retrieves count of QTL credible sets associated with a GWAS study
+# Variables: studyId: String!
+# Pagination Behavior: Paginated (page parameters)
+# Notes:
+# Summary query using page size: 1 and index: 0 to return only count.
+#  Successfully tested with GCST90002357 returning count=1514.
+#
+# Last Updated: 2025-11-21
+query QTLCredibleSetsSummaryQuery($studyId: String!) {
+  # Return a Study
+  study(studyId: $studyId) {
+    # Credible sets
+    qtlCredibleSets: credibleSets(page: { size: 1, index: 0 }) {
+      count
+    }
+  }
+}

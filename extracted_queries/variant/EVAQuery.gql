@@ -1,0 +1,74 @@
+# Query Name: EVAQuery
+# Entity Type: variant
+# Description:
+# Fetches EVA (European Variation Archive) clinical evidence for a genetic
+#  variant, including ClinVar submissions with disease associations, clinical
+#  significance, allele origins, review status, and supporting literature.
+# Variables: variantId: String! (Example: 19_44908822_C_T)
+# Pagination Behavior: Full results
+# Notes:
+# Query successfully tested with variant 19_44908822_C_T (rs7412), returned
+#  count=2 EVA evidences from ClinVar. No pagination - returns all EVA
+#  evidence records in single response. Response includes count (total number
+#  of clinical submissions) and rows array with detailed clinical evidence
+#  data. Each row contains: alleleOrigins (origin of allele:
+#  germline/somatic/etc), allelicRequirements (zygosity requirements like
+#  homozygous/heterozygous), clinicalSignificances (array of clinical
+#  classifications like 'drug response', 'benign', 'pathogenic'),
+#  cohortPhenotypes (array of reported phenotype terms from submitter),
+#  confidence (ClinVar review status like 'criteria provided, single
+#  submitter' or 'no assertion criteria provided' - maps to star ratings via
+#  clinvarStarMap), disease object (id: EFO/HP/MONDO disease ID, name:
+#  disease/phenotype name), diseaseFromSource (original disease/phenotype text
+#  as reported by submitter), studyId (ClinVar RCV accession number linking to
+#  ClinVar record), and literature (array of publication IDs: PubMed/PMC
+#  identifiers or null). Test data for 19_44908822_C_T: returned 2 submissions
+#  - one for 'drug response' (warfarin sensitivity) with RCV000845582 linking
+#  to cholesterol embolism (EFO_0005801), another 'benign' classification for
+#  Hypercholesterolemia (HP_0003124) with RCV001262472. No fragments to
+#  inline. Used in EVA section Body.tsx component with OtTable displaying
+#  sortable/filterable columns: Disease/phenotype (shows mapped disease with
+#  tooltip for diseaseFromSource and cohortPhenotypes), ClinVar ID (links to
+#  NCBI ClinVar with studyId RCV number), Clinical significance (displays
+#  clinicalSignificances array with sentence casing), Allele origin (shows
+#  alleleOrigins with tooltip for allelicRequirements), Review status
+#  (displays confidence as star rating 0-4 stars using ClinvarStars component
+#  and clinvarStarMap), and Literature (shows PublicationsDrawer with links to
+#  Europe PMC for each literature ID). Data sourced from European Variation
+#  Archive (EVA) aggregating ClinVar clinical submissions associating genetic
+#  variants to diseases/phenotypes. Section description indicates this shows
+#  'Genetic variation from clinical submissions' from EVA. The variant
+#  1_113761186_C_A was also tested and returned count=0 with empty rows array,
+#  confirming query works correctly for variants without EVA evidence.
+#
+# Last Updated: 2025-11-21
+query EVAQuery($variantId: String!) {
+  # Return a Variant
+  variant(variantId: $variantId) {
+    id
+    referenceAllele
+    alternateAllele
+    # The complete list of all possible datasources
+    evaEvidences: evidences(datasourceIds: ["eva"]) {
+      count
+      rows {
+        alleleOrigins
+        allelicRequirements
+        clinicalSignificances
+        cohortPhenotypes
+        confidence
+        # Disease evidence
+        disease {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+        }
+        diseaseFromSource
+        studyId
+        # list of pub med publications ids
+        literature
+      }
+    }
+  }
+}

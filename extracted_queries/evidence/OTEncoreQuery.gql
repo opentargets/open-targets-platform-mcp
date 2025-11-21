@@ -1,0 +1,68 @@
+# Query Name: EncoreQuery
+# Entity Type: evidence
+# Description:
+# Retrieves Encore evidence including genetic interactions cell line data
+#  biomarkers and phenotypic consequences for a target-disease pair
+# Variables: ensemblId: String!, efoId: String!, size: Int!
+# Pagination Behavior: Paginated (variable size)
+# Notes:
+# Query successfully tested, returns detailed Encore evidence including cell
+#  lines biomarkers genetic interactions and phenotypic consequences. Uses
+#  datasourceIds filter ot_crispr_encore.
+#
+# Last Updated: 2025-11-21
+query EncoreQuery($ensemblId: String!, $efoId: String!, $size: Int!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    otEncoreSummary: evidences(
+      ensemblIds: [$ensemblId]
+      enableIndirect: true
+      datasourceIds: ["encore"]
+      size: $size
+    ) {
+      count
+      rows {
+        # Target evidence
+        target {
+          # Open Targets target id
+          id
+          # HGNC approved symbol
+          approvedSymbol
+        }
+        # Disease evidence
+        disease {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+        }
+        diseaseCellLines {
+          name
+          id
+          tissue
+          tissueId
+        }
+        biomarkerList {
+          name
+          description
+        }
+        targetRole
+        interactingTargetRole
+        cellType
+        interactingTargetFromSourceId
+        phenotypicConsequenceLogFoldChange
+        phenotypicConsequenceFDR
+        phenotypicConsequencePValue
+        geneticInteractionScore
+        geneticInteractionPValue
+        geneticInteractionFDR
+        geneInteractionType
+        # Release version
+        releaseVersion
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+# Query Name: UniProtVariantsSummaryQuery
+# Entity Type: variant
+# Description:
+# Retrieves the count of UniProt variant evidences for a given variant. Used
+#  to determine if the UniProt variants section should be displayed.
+# Variables: variantId: String! (Example: 19_44908822_C_T)
+# Pagination Behavior: Full results
+# Notes:
+# Query successfully tested with rs7412 variant (19_44908822_C_T), returned
+#  count=2 UniProt variant evidences. Summary query that returns only the
+#  count of UniProt variant evidences. Used for section visibility
+#  determination. Uses datasourceIds filter ["uniprot_variants"].
+#
+# Last Updated: 2025-11-21
+query UniProtVariantsSummaryQuery($variantId: String!) {
+  # Return a Variant
+  variant(variantId: $variantId) {
+    # The complete list of all possible datasources
+    uniProtEvidences: evidences(datasourceIds: ["uniprot_variants"]) {
+      count
+    }
+  }
+}

@@ -1,0 +1,31 @@
+# Query Name: LinkedTargetsSummaryQuery
+# Entity Type: drug
+# Description: Retrieves count and list of targets linked to a drug via mechanism of action
+# Variables: chemblId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Returns drug name, linkedTargets count, and rows array with target
+#  id/approvedSymbol. Successfully tested with CHEMBL1201585 (TRASTUZUMAB)
+#  returning count=1 (ERBB2).
+#
+# Last Updated: 2025-11-21
+query LinkedTargetsSummaryQuery($chemblId: String!) {
+  # Return a drug
+  drug(chemblId: $chemblId) {
+    # Open Targets molecule id
+    id
+    # Molecule preferred name
+    name
+    # Molecule targets based on drug mechanism of action
+    linkedTargets {
+      count
+      # Target List
+      rows {
+        # Open Targets target id
+        id
+        # HGNC approved symbol
+        approvedSymbol
+      }
+    }
+  }
+}

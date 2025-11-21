@@ -1,0 +1,56 @@
+# Query Name: AdverseEventsQuery
+# Entity Type: drug
+# Description:
+# Retrieves adverse events (pharmacovigilance data) for a drug from MedDRA,
+#  including event counts, log likelihood ratios, and critical value for
+#  significance testing
+# Variables: chemblId: String!, index: Int (default: 0), size: Int (default: 10)
+# Pagination Behavior: Paginated (uses page parameter with index and size, returns count field)
+# Notes:
+# Query successfully tested with CHEMBL1201585 (vemurafenib). Returns count=19
+#  adverse events with complete data including event names, counts, logLR
+#  values, and meddraCode identifiers. Also includes criticalValue=364.92 for
+#  significance testing and separate maxLlr query (2714.55) to get maximum log
+#  likelihood ratio for visualization scaling. Top adverse events include
+#  ejection fraction decreased (1115 events, logLR=2714.55), myelosuppression
+#  (792 events, logLR=1991.55), and disease progression. Uses standard
+#  pagination via page.index and page.size parameters.
+#
+# Last Updated: 2025-11-21
+query AdverseEventsQuery(
+  $chemblId: String!
+  $index: Int = 0
+  $size: Int = 10
+) {
+  # Return a drug
+  drug(chemblId: $chemblId) {
+    # Open Targets molecule id
+    id
+    # Significant adverse events inferred from FAERS reports
+    maxLlr: adverseEvents(page: { index: 0, size: 1 }) {
+      # Significant adverse event entries
+      rows {
+        # Log-likelihood ratio
+        logLR
+      }
+    }
+    # Significant adverse events inferred from FAERS reports
+    adverseEvents(page: { index: $index, size: $size }) {
+      # LLR critical value to define significance
+      criticalValue
+      # Total significant adverse events
+      count
+      # Significant adverse event entries
+      rows {
+        # Meddra term on adverse event
+        name
+        # Number of reports mentioning drug and adverse event
+        count
+        # Log-likelihood ratio
+        logLR
+        # 8 digit unique meddra identification number
+        meddraCode
+      }
+    }
+  }
+}

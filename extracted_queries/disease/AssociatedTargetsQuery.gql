@@ -1,0 +1,37 @@
+# Query Name: associatedTargets
+# Entity Type: disease
+# Description:
+# Retrieves targets associated with a disease using on-the-fly calculation
+#  with association scores
+# Variables: efoId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Returns disease name count and target associations with overall scores.
+#  Successfully tested with EFO_0000685 (rheumatoid arthritis) returning
+#  count=4955.
+#
+# Last Updated: 2025-11-21
+query associatedTargets($efoId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # Disease name
+    name
+    # associations on the fly
+    associatedTargets {
+      count
+      # Associated Targets using (On the fly method)
+      rows {
+        # Target
+        target {
+          # Open Targets target id
+          id
+          # HGNC approved symbol
+          approvedSymbol
+        }
+        score
+      }
+    }
+  }
+}

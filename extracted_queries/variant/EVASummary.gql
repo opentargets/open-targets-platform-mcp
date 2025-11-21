@@ -1,0 +1,42 @@
+# Query Name: EVASummary
+# Entity Type: variant
+# Description:
+# Retrieves the total count of ClinVar (EVA) evidences associated with a
+#  genetic variant. Used to determine if the ClinVar section should be
+#  displayed.
+# Variables: variantId: String! (Example: 19_44908822_C_T)
+# Pagination Behavior: Full results
+# Notes:
+# Originally a fragment (EVASummaryFragment on Variant), converted to
+#  standalone query. Query successfully tested with variants 19_44908822_C_T
+#  (rs7412, returned count=2) and 1_113761186_C_A (returned count=0). No
+#  pagination - returns only the count field, not the actual evidence data.
+#  Response includes variant object with id (variant identifier in
+#  chr_pos_ref_alt format) and evaEvidences object containing count (integer
+#  representing total number of EVA/ClinVar clinical significance evidences
+#  associated with the variant). Used in Summary.tsx component via
+#  usePlatformApi to determine section visibility via hasData function which
+#  checks if count > 0. The summary component uses this minimal query to
+#  efficiently check data availability, while the main Body component uses
+#  EVAQuery.gql which fetches full evidence details including disease
+#  associations, clinical significances, allele origins, review status, and
+#  literature references. EVA (European Variation Archive) evidences primarily
+#  come from ClinVar database providing clinical significance annotations.
+#  Fragment inlined with id field added for proper query structure. Related to
+#  EVAQuery.gql which provides full evidence details with rows array
+#  containing alleleOrigins, allelicRequirements, clinicalSignificances,
+#  cohortPhenotypes, confidence (review status), disease object,
+#  diseaseFromSource, studyId (ClinVar ID), and literature references for
+#  detailed ClinVar evidence table display.
+#
+# Last Updated: 2025-11-21
+query EVASummary($variantId: String!) {
+  # Return a Variant
+  variant(variantId: $variantId) {
+    id
+    # The complete list of all possible datasources
+    evaEvidences: evidences(datasourceIds: ["eva"]) {
+      count
+    }
+  }
+}

@@ -1,0 +1,40 @@
+# Query Name: Locus2GeneQuery
+# Entity Type: credibleset
+# Description:
+# Fetches locus-to-gene predictions for a credible set, including SHAP-based
+#  feature importance scores and target genes with prediction scores
+# Variables: studyLocusId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Query executes successfully. Tested with
+#  studyLocusId='7d68cc9c70351c9dbd2a2c0c145e555d', returned count=3
+#  predictions for PTPN22, PHTF1, and RSBN1. Each prediction includes
+#  shapBaseValue, 27 feature scores (eQTL/pQTL/sQTL coloc, distance metrics,
+#  VEP scores, gene counts), overall score, and target gene information. No
+#  pagination - returns all predictions.
+#
+# Last Updated: 2025-11-21
+query Locus2GeneQuery($studyLocusId: String!) {
+  # Return a Credible Set
+  credibleSet(studyLocusId: $studyLocusId) {
+    l2GPredictions {
+      count
+      rows {
+        shapBaseValue
+        features {
+          shapValue
+          value
+          name
+        }
+        score
+        # Target
+        target {
+          # Open Targets target id
+          id
+          # HGNC approved symbol
+          approvedSymbol
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,88 @@
+# Query Name: DiseaseSimilarEntitiesQuery
+# Entity Type: disease
+# Description:
+# Retrieves similar entities (diseases) based on literature co-occurrence
+#  using a Word2Vec model trained with PubMed. Returns related entities with
+#  similarity scores.
+# Variables:
+# id: String!, ids: [String!] (default: []), threshold: Float (default: 0.5),
+#  size: Int! (default: 15), entityNames: [String!] (default: []), cursor:
+#  String
+# Pagination Behavior: Full results
+# Notes:
+# Query successfully tested with EFO_0000685 (rheumatoid arthritis), returned
+#  5 similar entities with similarity scores.
+#
+# Last Updated: 2025-11-21
+query DiseaseSimilarEntitiesQuery(
+  $id: String!
+  $ids: [String!] = []
+  $startYear: Int = null
+  $startMonth: Int = null
+  $endYear: Int = null
+  $endMonth: Int = null
+  $threshold: Float = 0.5
+  $size: Int! = 15
+  $entityNames: [String!] = []
+  $cursor: String = null
+) {
+  # Return a Disease
+  disease(efoId: $id) {
+    # Open Targets disease id
+    id
+    # Disease name
+    name
+    # Return similar labels using a model Word2CVec trained with PubMed
+    similarEntities(
+      additionalIds: $ids
+      threshold: $threshold
+      size: $size
+      entityNames: $entityNames
+    ) {
+      score
+      id
+      # Similarity label optionally resolved into an entity
+      object {
+        ... on Target {
+          # Open Targets target id
+          id
+          # HGNC approved symbol
+          approvedSymbol
+        }
+        ... on Drug {
+          # Open Targets molecule id
+          id
+          # Molecule preferred name
+          name
+        }
+        ... on Disease {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+        }
+      }
+    }
+    # Return the list of publications that mention the main entity, alone or in combination with other entities
+    literatureOcurrences(
+      additionalIds: $ids
+      cursor: $cursor
+      startYear: $startYear
+      startMonth: $startMonth
+      endYear: $endYear
+      endMonth: $endMonth
+    ) {
+      count
+      filteredCount
+      # Earliest publication year.
+      earliestPubYear
+      cursor
+      rows {
+        pmid
+        pmcid
+        # Publication Date
+        publicationDate
+      }
+    }
+  }
+}

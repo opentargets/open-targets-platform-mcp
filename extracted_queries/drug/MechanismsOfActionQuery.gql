@@ -1,0 +1,56 @@
+# Query Name: MechanismsOfActionSectionQuery
+# Entity Type: drug
+# Description:
+# Retrieves mechanisms of action data for a drug, including action types,
+#  target information, references, and relationships to parent/child molecules
+# Variables: chemblId: String! (Example: CHEMBL1201585)
+# Pagination Behavior: Full results - no pagination
+# Notes:
+# Query executes successfully. Tested with CHEMBL1201585 (vemurafenib),
+#  returned 1 mechanism row with action type (INHIBITOR), target type (single
+#  protein), target ERBB2 (ENSG00000141736), mechanism description, and
+#  DailyMed reference. No parent molecule or child molecules for vemurafenib.
+#  No pagination - returns complete list of mechanisms.
+#
+# Last Updated: 2025-11-21
+query MechanismsOfActionSectionQuery($chemblId: String!) {
+  # Return a drug
+  drug(chemblId: $chemblId) {
+    # Open Targets molecule id
+    id
+    # Mechanisms of action to produce intended pharmacological effects. Curated from scientific literature and post-marketing package inserts
+    mechanismsOfAction {
+      rows {
+        mechanismOfAction
+        targetName
+        # Target List
+        targets {
+          # Open Targets target id
+          id
+          # HGNC approved symbol
+          approvedSymbol
+        }
+        references {
+          source
+          urls
+        }
+      }
+      uniqueActionTypes
+      uniqueTargetTypes
+    }
+    # ChEMBL ID of parent molecule
+    parentMolecule {
+      # Open Targets molecule id
+      id
+      # Molecule preferred name
+      name
+    }
+    # Chembl IDs of molecules that descend from current molecule.
+    childMolecules {
+      # Open Targets molecule id
+      id
+      # Molecule preferred name
+      name
+    }
+  }
+}

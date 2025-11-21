@@ -1,0 +1,42 @@
+# Query Name: LinkedTargetsQuery
+# Entity Type: drug
+# Description:
+# Retrieves molecule targets linked to a drug based on mechanism of action,
+#  including target identifiers, names, and biotypes
+# Variables:
+# chemblId: String! (Example: CHEMBL1201585 for trastuzumab, CHEMBL1229517 for
+#  vemurafenib)
+# Pagination Behavior: Full results - no pagination
+# Notes:
+# Query successfully tested with CHEMBL1201585 (Trastuzumab). Returns count=1
+#  with target ERBB2 (ENSG00000141736, erb-b2 receptor tyrosine kinase 2,
+#  protein_coding biotype). Also tested with CHEMBL1229517 (Vemurafenib)
+#  returning BRAF target, and CHEMBL1336 (Sorafenib) returning 9 targets
+#  (PDGFRB, BRAF, RAF1, KIT, FLT3, RET, FLT1, FLT4, KDR). Query extracted from
+#  SearchPageQuery.gql (lines 124-130) and enhanced with additional target
+#  fields (approvedName, biotype). Returns complete list of molecular targets
+#  without pagination using count + rows pattern.
+#
+# Last Updated: 2025-11-21
+query LinkedTargetsQuery($chemblId: String!) {
+  # Return a drug
+  drug(chemblId: $chemblId) {
+    # Open Targets molecule id
+    id
+    # Molecule targets based on drug mechanism of action
+    linkedTargets {
+      count
+      # Target List
+      rows {
+        # Open Targets target id
+        id
+        # HGNC approved symbol
+        approvedSymbol
+        # Approved gene name
+        approvedName
+        # Molecule biotype
+        biotype
+      }
+    }
+  }
+}

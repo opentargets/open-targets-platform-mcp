@@ -1,0 +1,46 @@
+# Query Name: drugApprovalWithdrawnWarningData
+# Entity Type: drug
+# Description:
+# Retrieves drug regulatory approval status withdrawal information and safety
+#  warnings including black box warnings
+# Variables: chemblId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Returns isApproved hasBeenWithdrawn blackBoxWarning flags and detailed
+#  drugWarnings array with warningType description toxicityClass year and
+#  references. Successfully tested with CHEMBL1201585 (TRASTUZUMAB) returning
+#  3 black box warnings (teratogenicity respiratory toxicity cardiotoxicity).
+#
+# Last Updated: 2025-11-21
+query drugApprovalWithdrawnWarningData($chemblId: String!) {
+  # Return a drug
+  drug(chemblId: $chemblId) {
+    # Molecule preferred name
+    name
+    # Open Targets molecule id
+    id
+    # Alias for maximumClinicalTrialPhase == 4
+    isApproved
+    # Has drug been withdrawn from the market
+    hasBeenWithdrawn
+    # Alert on life-threteaning drug side effects provided by FDA
+    blackBoxWarning
+    # Warnings present on drug as identified by ChEMBL.
+    drugWarnings {
+      # Either 'black box warning' or 'withdrawn'
+      warningType
+      # Reason for withdrawal
+      description
+      # High level toxicity category by Meddra System Organ Class
+      toxicityClass
+      # Year of withdrawal
+      year
+      # Source of withdrawal information
+      references {
+        id
+        source
+        url
+      }
+    }
+  }
+}

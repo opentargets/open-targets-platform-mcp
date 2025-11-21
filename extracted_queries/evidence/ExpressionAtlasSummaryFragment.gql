@@ -1,0 +1,37 @@
+# Query Name: ExpressionAtlasSummaryFragment
+# Entity Type: evidence
+# Description:
+# Fragment that fetches Expression Atlas evidence count for a target-disease
+#  association. Used to display summary statistics showing the number of
+#  differential expression evidence.
+# Variables:
+# ensgId: String! (Example: ENSG00000232810), efoId: String! (Example:
+#  EFO_0000685)
+# Pagination Behavior: Full results
+# Notes:
+# Originally a fragment, converted to standalone query. Query successfully
+#  tested with TNF (ENSG00000232810) + rheumatoid arthritis (EFO_0000685),
+#  returned count=1. Uses size=0 parameter to retrieve only count without
+#  fetching evidence rows for efficient summary display. Returns total number
+#  of Expression Atlas evidence entries without pagination. Related to
+#  ExpressionAtlasQuery.gql which fetches full evidence details including fold
+#  changes, p-values, confidence levels, and experimental context. Used by
+#  Summary component in ExpressionAtlas section to display entry count.
+#
+# Last Updated: 2025-11-21
+query ExpressionAtlasSummaryFragment($ensgId: String!, $efoId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    expressionAtlasSummary: evidences(
+      ensemblIds: [$ensgId]
+      enableIndirect: true
+      datasourceIds: ["expression_atlas"]
+      size: 0
+    ) {
+      count
+    }
+  }
+}

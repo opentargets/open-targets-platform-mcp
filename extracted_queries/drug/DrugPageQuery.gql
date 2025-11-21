@@ -1,0 +1,23 @@
+# Query Name: DrugPageQuery
+# Entity Type: drug
+# Description: Fetches basic drug information including ChEMBL ID, name, and cross-references
+# Variables: chemblId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Query executes successfully. Returns drug data including name (TRASTUZUMAB)
+#  and cross-references to EMA and DailyMed.
+#
+# Last Updated: 2025-11-21
+query DrugPageQuery($chemblId: String!) {
+  # Return a drug
+  drug(chemblId: $chemblId) {
+    # Open Targets molecule id
+    id
+    # Molecule preferred name
+    name
+    crossReferences {
+      source
+      ids
+    }
+  }
+}

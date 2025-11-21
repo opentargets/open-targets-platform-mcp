@@ -1,0 +1,38 @@
+# Query Name: ExpressionAtlasSummary
+# Entity Type: evidence
+# Description:
+# Retrieves the count of Expression Atlas evidence entries linking a target
+#  gene to diseases, including indirect evidence. Used in the evidence page
+#  summary to show how many RNA expression-based evidence records exist.
+# Variables:
+# efoId: String! (Example: EFO_0000756), ensgId: String! (Example:
+#  ENSG00000157764)
+# Pagination Behavior: Full results
+# Notes:
+# Originally a fragment, converted to standalone query. Query successfully
+#  tested with BRAF (ENSG00000157764) + melanoma (EFO_0000756), returned
+#  count=0. Uses size=0 parameter to retrieve only count without fetching
+#  evidence rows for efficient summary display. Returns total number of
+#  Expression Atlas RNA expression evidence entries without pagination. Used
+#  by Summary component in ExpressionAtlas section to display entry count.
+#  Related to ExpressionAtlasQuery.gql which fetches full evidence details
+#  including contrast, confidence, log2FoldChangeValue, resourceScore, and
+#  studyId with pagination support.
+#
+# Last Updated: 2025-11-21
+query ExpressionAtlasSummary($efoId: String!, $ensgId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    expressionAtlasSummary: evidences(
+      ensemblIds: [$ensgId]
+      enableIndirect: true
+      datasourceIds: ["expression_atlas"]
+      size: 0
+    ) {
+      count
+    }
+  }
+}

@@ -1,0 +1,49 @@
+# Query Name: IndicationsQuery
+# Entity Type: drug
+# Description:
+# Retrieves drug indications with disease information, therapeutic areas, max
+#  phase, and references from ClinicalTrials and other sources
+# Variables: chemblId: String!
+# Pagination Behavior: Full results - no pagination
+# Notes:
+# Query executes successfully. Tested with CHEMBL1201585 (vemurafenib),
+#  returned count=75 indications with complete data including disease names,
+#  therapeutic areas, maxPhaseForIndication values (1-4), and references from
+#  ClinicalTrials, ATC, EMA, and DailyMed sources. No pagination - returns all
+#  indications in a single response. Top indications include breast cancer
+#  (Phase 4), gastric cancer (Phase 4), and various other cancers with
+#  different development phases.
+#
+# Last Updated: 2025-11-21
+query IndicationsQuery($chemblId: String!) {
+  # Return a drug
+  drug(chemblId: $chemblId) {
+    # Open Targets molecule id
+    id
+    # Investigational and approved indications curated from clinical trial records and post-marketing package inserts
+    indications {
+      rows {
+        maxPhaseForIndication
+        # Disease
+        disease {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+          # Ancestor therapeutic area disease entities in ontology
+          therapeuticAreas {
+            # Open Targets disease id
+            id
+            # Disease name
+            name
+          }
+        }
+        references {
+          ids
+          source
+        }
+      }
+      count
+    }
+  }
+}

@@ -1,0 +1,21 @@
+# Query Name: DiseasePageQuery
+# Entity Type: disease
+# Description: Fetches basic disease information including ID, name, and cross-references
+# Variables: efoId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Query executes successfully. Returns comprehensive dbXRefs for rheumatoid
+#  arthritis including SNOMEDCT, UMLS, OMIM, ICD codes, MESH, and more.
+#
+# Last Updated: 2025-11-21
+query DiseasePageQuery($efoId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # Disease name
+    name
+    # List of external cross reference IDs
+    dbXRefs
+  }
+}

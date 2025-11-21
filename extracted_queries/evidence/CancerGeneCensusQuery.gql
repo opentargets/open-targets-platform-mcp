@@ -1,0 +1,62 @@
+# Query Name: CancerGeneCensusQuery
+# Entity Type: evidence
+# Description:
+# Fetches Cancer Gene Census evidence data for a target-disease pair,
+#  including mutation types, sample statistics, and target hallmarks (role in
+#  cancer)
+# Variables: ensemblId: String!, efoId: String!, size: Int!
+# Pagination Behavior: Paginated (returns size/page, total varies)
+# Notes:
+# Query returns count=23 for BRAF-melanoma with size=10 returning 10 rows.
+#  Includes mutatedSamples with functional consequences, literature
+#  references, and target hallmarks data.
+#
+# Last Updated: 2025-11-21
+query CancerGeneCensusQuery($ensemblId: String!, $efoId: String!, $size: Int!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    cancerGeneCensusSummary: evidences(
+      ensemblIds: [$ensemblId]
+      enableIndirect: true
+      datasourceIds: ["cancer_gene_census"]
+      size: $size
+    ) {
+      count
+      rows {
+        # Disease evidence
+        disease {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+        }
+        mutatedSamples {
+          functionalConsequence {
+            id
+            label
+          }
+          numberSamplesWithMutationType
+          numberSamplesTested
+        }
+        # list of pub med publications ids
+        literature
+      }
+    }
+  }
+  # Return a Target
+  target(ensemblId: $ensemblId) {
+    # Open Targets target id
+    id
+    # Target-modulated essential alterations in cell physiology that dictate malignant growth
+    hallmarks {
+      attributes {
+        description
+        pmid
+        name
+      }
+    }
+  }
+}

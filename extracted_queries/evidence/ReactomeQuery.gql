@@ -1,0 +1,56 @@
+# Query Name: reactomeQuery
+# Entity Type: evidence
+# Description:
+# Retrieves detailed Reactome pathway evidence for target-disease associations
+#  with reaction and pathway information
+# Variables: ensemblId: String!, efoId: String!, size: Int!
+# Pagination Behavior: Paginated (variable size)
+# Notes:
+# Returns target approvedSymbol and evidence rows with disease
+#  diseaseFromSource reactionName/reactionId pathways targetModulation
+#  variantAminoacidDescriptions and literature. Successfully tested with
+#  EFO_0000685 and ENSG00000157764.
+#
+# Last Updated: 2025-11-21
+query reactomeQuery($ensemblId: String!, $efoId: String!, $size: Int!) {
+  # Return a Target
+  target(ensemblId: $ensemblId) {
+    # HGNC approved symbol
+    approvedSymbol
+  }
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    reactomeSummary: evidences(
+      ensemblIds: [$ensemblId]
+      enableIndirect: true
+      datasourceIds: ["reactome"]
+      size: $size
+    ) {
+      count
+      rows {
+        # Disease evidence
+        disease {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+        }
+        diseaseFromSource
+        reactionName
+        reactionId
+        targetFromSourceId
+        pathways {
+          id
+          name
+        }
+        targetModulation
+        variantAminoacidDescriptions
+        # list of pub med publications ids
+        literature
+      }
+    }
+  }
+}

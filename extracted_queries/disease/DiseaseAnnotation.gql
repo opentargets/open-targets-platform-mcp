@@ -1,0 +1,90 @@
+# Query Name: diseaseAnnotation
+# Entity Type: disease
+# Description:
+# Retrieves comprehensive disease phenotype annotations from HPO and MONDO
+#  with detailed evidence
+# Variables: efoId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Returns detailed phenotype annotations including phenotypeHPO/phenotypeEFO
+#  entities and evidence with aspect bioCuration frequency onset modifiers and
+#  references. Successfully tested with EFO_0000685.
+#
+# Last Updated: 2025-11-21
+query diseaseAnnotation($efoId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # Disease name
+    name
+    # Phenotype from HPO index
+    phenotypes {
+      # List of Disease and phenotypes annotations
+      rows {
+        # Phenotype entity
+        phenotypeHPO {
+          # Open Targets hpo id
+          id
+          # Phenotype name
+          name
+          # Phenotype description
+          description
+          # namespace
+          namespace
+        }
+        # Disease Entity
+        phenotypeEFO {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+        }
+        # List of phenotype annotations.
+        evidence {
+          # One of P (Phenotypic abnormality), I (inheritance), C (onset and clinical course). Might be null (MONDO)
+          aspect
+          # This refers to the center or user making the annotation and the date on which the annotation was made
+          bioCuration
+          # This field refers to the database and database identifier. EG. OMIM
+          diseaseFromSourceId
+          # Related name from the field diseaseFromSourceId
+          diseaseFromSource
+          # This field indicates the level of evidence supporting the annotation.
+          evidenceType
+          # A term-id from the HPO-sub-ontology
+          frequency
+          # HPO Entity
+          frequencyHPO {
+            # Phenotype name
+            name
+            # Open Targets hpo id
+            id
+          }
+          # This optional field can be used to qualify the annotation. Values: [True or False]
+          qualifierNot
+          # A term-id from the HPO-sub-ontology below the term Age of onset.
+          onset {
+            # Phenotype name
+            name
+            # Open Targets hpo id
+            id
+          }
+          # HP terms from the Clinical modifier subontology
+          modifiers {
+            # Phenotype name
+            name
+            # Open Targets hpo id
+            id
+          }
+          # This field indicates the source of the information used for the annotation (phenotype.hpoa)
+          references
+          # This field contains the strings MALE or FEMALE if the annotation in question is limited to males or females.
+          sex
+          # Possible source mapping: HPO or MONDO
+          resource
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+# Query Name: QTLCredibleSetsSummary
+# Entity Type: variant
+# Description:
+# Retrieves the count of molecular QTL (molQTL) credible sets containing a
+#  specific variant across different study types (scsqtl, sceqtl, scpqtl,
+#  sctuqtl, sqtl, eqtl, pqtl, tuqtl).
+# Variables: variantId: String! (Example: 19_44908822_C_T)
+# Pagination Behavior: Full results
+# Notes:
+# Originally a fragment (VariantQTLCredibleSetsSummaryFragment on Variant),
+#  converted to standalone query. Query successfully tested with variants
+#  19_44908822_C_T (rs7412, returned count=27 QTL credible sets) and
+#  1_113761186_C_A (returned count=7 QTL credible sets). No pagination -
+#  returns only the count field, not the actual credible set data. Response
+#  includes variant object with qtlCredibleSets object containing count
+#  (integer representing total number of molQTL credible sets where this
+#  variant appears). Uses studyTypes filter set to [scsqtl, sceqtl, scpqtl,
+#  sctuqtl, sqtl, eqtl, pqtl, tuqtl] to retrieve all molecular QTL types
+#  including single-cell QTL studies (scsqtl, sceqtl, scpqtl, sctuqtl),
+#  splicing QTL (sqtl), expression QTL (eqtl), protein QTL (pqtl), and
+#  transcript usage QTL (tuqtl). Used in Summary.tsx component via
+#  usePlatformApi to determine section visibility via hasData function which
+#  checks if qtlCredibleSets.count > 0. The summary component uses this
+#  minimal query (with page size=1, index=0) to efficiently check data
+#  availability without fetching actual credible set rows. The main Body
+#  component uses QTLCredibleSetsQuery.gql which paginates through actual
+#  credible set rows with full details including lead variants, studies,
+#  affected genes, tissues/cells, conditions, p-values, beta values, posterior
+#  probabilities, fine-mapping methods and confidence, and credible set sizes.
+#  Fragment inlined with query wrapper added. Related to
+#  QTLCredibleSetsQuery.gql which provides paginated full credible set details
+#  with size=500/batch for the detailed table showing which molQTL studies
+#  include this variant in their credible sets.
+#
+# Last Updated: 2025-11-21
+query QTLCredibleSetsSummary($variantId: String!) {
+  # Return a Variant
+  variant(variantId: $variantId) {
+    # Credible sets
+    qtlCredibleSets: credibleSets(
+      studyTypes: [scsqtl, sceqtl, scpqtl, sctuqtl, sqtl, eqtl, pqtl, tuqtl]
+      page: { size: 1, index: 0 }
+    ) {
+      count
+    }
+  }
+}

@@ -1,0 +1,28 @@
+# Query Name: SlapEnrichSummaryQuery
+# Entity Type: evidence
+# Description:
+# Retrieves evidence count from SLAPEnrich literature mining datasource for
+#  target-disease associations
+# Variables: ensgId: String!, efoId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Summary query using size: 0 to return only count. Successfully tested with
+#  EFO_0000685 and ENSG00000157764.
+#
+# Last Updated: 2025-11-21
+query SlapEnrichSummaryQuery($ensgId: String!, $efoId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    slapEnrich: evidences(
+      ensemblIds: [$ensgId]
+      enableIndirect: true
+      datasourceIds: ["slapenrich"]
+      size: 0
+    ) {
+      count
+    }
+  }
+}

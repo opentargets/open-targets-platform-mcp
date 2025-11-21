@@ -1,0 +1,54 @@
+# Query Name: GWASColocQuery
+# Entity Type: credibleset
+# Description:
+# Retrieves colocalization metrics for GWAS credible sets, including
+#  overlapping study loci, variant information, and statistical measures for
+#  assessing variant colocalization.
+# Variables: studyLocusId: String (Example: 7d68cc9c70351c9dbd2a2c0c145e555d)
+# Pagination Behavior: Paginated (batch: 500/page, may auto-fetch all)
+# Notes:
+# Query successfully tested with 7d68cc9c70351c9dbd2a2c0c145e555d. Returns 502
+#  colocalization results with complete metrics including otherStudyLocus,
+#  variant details, colocalization methods (COLOC, eCAVIAR), statistical
+#  measures (h3, h4, clpp, betaRatioSignAverage), and colocalization variant
+#  counts.
+#
+# Last Updated: 2025-11-21
+query GWASColocQuery($studyLocusId: String!, $size: Int!, $index: Int!) {
+  # Return a Credible Set
+  credibleSet(studyLocusId: $studyLocusId) {
+    colocalisation(studyTypes: [gwas], page: { size: $size, index: $index }) {
+      count
+      rows {
+        # Credible set
+        otherStudyLocus {
+          studyLocusId
+          # Gwas study
+          study {
+            # The study identifier
+            id
+            # The project identifier
+            projectId
+            traitFromSource
+            publicationFirstAuthor
+          }
+          variant {
+            id
+            chromosome
+            position
+            referenceAllele
+            alternateAllele
+          }
+          pValueMantissa
+          pValueExponent
+        }
+        numberColocalisingVariants
+        colocalisationMethod
+        h3
+        h4
+        clpp
+        betaRatioSignAverage
+      }
+    }
+  }
+}

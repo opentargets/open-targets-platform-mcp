@@ -1,0 +1,36 @@
+# Query Name: CancerGeneCensusSummaryFragment
+# Entity Type: evidence
+# Description:
+# Retrieves the count of Cancer Gene Census evidence entries for a
+#  target-disease association. Used to display summary statistics showing the
+#  number of somatic mutation evidence from the Cancer Gene Census datasource.
+# Variables:
+# efoId: String! (Example: EFO_0000756), ensgId: String! (Example:
+#  ENSG00000157764)
+# Pagination Behavior: Full results
+# Notes:
+# Originally a fragment, converted to standalone query. Query successfully
+#  tested with BRAF (ENSG00000157764) + melanoma (EFO_0000756), returned
+#  count=23. Also tested with TP53 (ENSG00000141510) + breast cancer
+#  (MONDO_0007254), returned count=18. Uses size=0 parameter to retrieve only
+#  count without fetching evidence rows for efficient summary display. Returns
+#  total number of Cancer Gene Census evidence entries without pagination.
+#  Used by Summary component in CancerGeneCensus section.
+#
+# Last Updated: 2025-11-21
+query CancerGeneCensusSummaryFragment($efoId: String!, $ensgId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    cancerGeneCensusSummary: evidences(
+      ensemblIds: [$ensgId]
+      enableIndirect: true
+      datasourceIds: ["cancer_gene_census"]
+      size: 0
+    ) {
+      count
+    }
+  }
+}

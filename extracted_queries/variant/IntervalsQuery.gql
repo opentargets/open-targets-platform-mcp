@@ -1,0 +1,84 @@
+# Query Name: IntervalsQuery
+# Entity Type: variant
+# Description:
+# Fetches regulatory interval data for a variant, including gene associations,
+#  biosample context, interval types, scores, and genomic coordinates from the
+#  E2G (Enhancer to Gene) dataset.
+# Variables: variantId: String! (Example: 19_44908822_C_T)
+# Pagination Behavior: Paginated (batch: 3000/page, may auto-fetch all)
+# Notes:
+# Query successfully tested with two variants: 19_44908822_C_T (rs7412)
+#  returned 58 intervals linking to APOE and APOC1 genes, and 1_113761186_C_A
+#  (rs6679677) returned 1 interval linking to PHTF1 gene. Uses offset-based
+#  pagination with page: {size: 3000, index: 0} parameters. Response includes
+#  count (total intervals) and rows array with detailed interval data. Each
+#  row contains: chromosome, start, end (genomic coordinates), target object
+#  (id/Ensembl ID, approvedSymbol, approvedName for linked gene), pmid (PubMed
+#  reference), biosample object (biosampleId from UBERON/CL ontologies,
+#  biosampleName), score (0-1 E2G confidence score reflecting likelihood this
+#  region regulates target gene), resourceScore array (name/value pairs for
+#  DNase and HiC_contacts sub-scores), datasourceId (E2G), distanceToTss
+#  (distance in base pairs from transcription start site, can be negative),
+#  studyId (ENCODE experiment ID like ENCFF482HID), intervalType (genic or
+#  intergenic classification). The E2G score integrates epigenomic (DNase
+#  hypersensitivity) and 3D chromatin (Hi-C contacts) data to predict
+#  enhancer-to-gene regulatory relationships. No fragments to inline. Used in
+#  Body.tsx component with OtTable displaying sortable/filterable columns:
+#  Gene (links to target page), Affected tissue/cell (links to OBO ontology),
+#  Interval type, Study (links to ENCODE), Distance from start site (bp),
+#  Interval size (bp, calculated as end-start+1), Interval range
+#  (chr:start-end format with links), and Score (displayed with 3 decimal
+#  places, tooltip explaining E2G confidence interpretation). Table defaults
+#  to sort by score descending and shows 10 rows per page with pagination.
+#  Data sourced from Effector to Gene (E2G) predictions integrating ENCODE
+#  chromatin datasets. Used to identify regulatory regions where variants may
+#  affect gene expression through disruption of enhancer activity or chromatin
+#  interactions. For rs7412 (APOE variant): shows intervals in multiple tissue
+#  types (lung, brain, kidney, liver) with scores ranging from 0.973 to 0.600,
+#  primarily genic intervals with distances 1392-3014 bp from TSS,
+#  demonstrating tissue-specific regulatory potential of this clinically
+#  relevant Alzheimer's disease risk variant.
+#
+# Last Updated: 2025-11-21
+query IntervalsQuery($variantId: String!) {
+  # Return a Variant
+  variant(variantId: $variantId) {
+    id
+    rsIds
+    referenceAllele
+    alternateAllele
+    # Intervals for the variant
+    intervals(page: { size: 3000, index: 0 }) {
+      count
+      rows {
+        chromosome
+        start
+        end
+        # Target
+        target {
+          # Open Targets target id
+          id
+          # HGNC approved symbol
+          approvedSymbol
+          # Approved gene name
+          approvedName
+        }
+        pmid
+        # Biosample
+        biosample {
+          biosampleId
+          biosampleName
+        }
+        score
+        resourceScore {
+          name
+          value
+        }
+        datasourceId
+        distanceToTss
+        studyId
+        intervalType
+      }
+    }
+  }
+}

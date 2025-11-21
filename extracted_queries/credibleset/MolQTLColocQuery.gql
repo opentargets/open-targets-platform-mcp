@@ -1,0 +1,76 @@
+# Query Name: MolQTLColocQuery
+# Entity Type: credibleset
+# Description:
+# Retrieves paginated molecular QTL colocalization data for a credible set,
+#  including study details (pQTL, eQTL, sQTL, etc.), lead variants,
+#  statistical metrics (H3, H4, CLPP), and directionality information
+# Variables: studyLocusId: String!, size: Int!, index: Int!
+# Pagination Behavior: Paginated (uses page parameter with size and index, returns count field)
+# Notes:
+# Query successfully tested with
+#  studyLocusId=7d68cc9c70351c9dbd2a2c0c145e555d, size=10, index=0. Returns
+#  count=14 molecular QTL colocalization results across study types [scsqtl,
+#  sceqtl, scpqtl, sctuqtl, sqtl, eqtl, pqtl, tuqtl]. Includes trans-QTL flag,
+#  target/biosample information, colocalization methods (COLOC/eCAVIAR), and
+#  beta ratio sign average for directionality.
+#
+# Last Updated: 2025-11-21
+query MolQTLColocQuery($studyLocusId: String!, $size: Int!, $index: Int!) {
+  # Return a Credible Set
+  credibleSet(studyLocusId: $studyLocusId) {
+    molqtlcolocalisation: colocalisation(
+      studyTypes: [scsqtl, sceqtl, scpqtl, sctuqtl, sqtl, eqtl, pqtl, tuqtl]
+      page: { size: $size, index: $index }
+    ) {
+      count
+      rows {
+        # Credible set
+        otherStudyLocus {
+          studyLocusId
+          isTransQtl
+          # Gwas study
+          study {
+            # The study identifier
+            id
+            # The study type
+            studyType
+            # The project identifier
+            projectId
+            traitFromSource
+            publicationFirstAuthor
+            # Condition
+            condition
+            # Target
+            target {
+              # HGNC approved symbol
+              approvedSymbol
+              # Open Targets target id
+              id
+            }
+            # biosample
+            biosample {
+              biosampleId
+              biosampleName
+              description
+            }
+          }
+          variant {
+            id
+            chromosome
+            position
+            referenceAllele
+            alternateAllele
+          }
+          pValueMantissa
+          pValueExponent
+        }
+        numberColocalisingVariants
+        colocalisationMethod
+        h3
+        h4
+        clpp
+        betaRatioSignAverage
+      }
+    }
+  }
+}

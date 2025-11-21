@@ -1,0 +1,90 @@
+# Query Name: DiseaseKnownDrugsQuery
+# Entity Type: disease
+# Description:
+# Retrieves known drugs for a disease with clinical trial phases mechanisms of
+#  action drug types and reference URLs. Supports pagination and free text
+#  search filtering.
+# Variables: efoId: String!, cursor: String, freeTextQuery: String, size: Int (default: 10)
+# Pagination Behavior: Paginated (cursor-based, 10/page default)
+# Notes:
+# Query successfully tested with EFO_0000685 (rheumatoid arthritis), returned
+#  count=1370 known drugs.
+#
+# Last Updated: 2025-11-21
+query DiseaseKnownDrugsQuery(
+  $efoId: String!
+  $cursor: String
+  $freeTextQuery: String
+  $size: Int = 10
+) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # Clinical precedence for investigational or approved drugs indicated for disease and curated mechanism of action
+    knownDrugs(cursor: $cursor, freeTextQuery: $freeTextQuery, size: $size) {
+      # Total number of entries
+      count
+      cursor
+      # Clinical precedence entries with known mechanism of action
+      rows {
+        # Clinical Trial phase
+        phase
+        # Trial status
+        status
+        # Source urls from clinical trials
+        urls {
+          # resource name
+          name
+          # resource url
+          url
+        }
+        # Curated disease indication entity
+        disease {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+        }
+        # Curated drug entity
+        drug {
+          # Open Targets molecule id
+          id
+          # Molecule preferred name
+          name
+          # Mechanisms of action to produce intended pharmacological effects. Curated from scientific literature and post-marketing package inserts
+          mechanismsOfAction {
+            rows {
+              actionType
+              # Target List
+              targets {
+                # Open Targets target id
+                id
+              }
+            }
+          }
+        }
+        # Source urls from clinical trials
+        urls {
+          # resource url
+          url
+          # resource name
+          name
+        }
+        # Drug modality
+        drugType
+        # Mechanism of Action description
+        mechanismOfAction
+        # Drug target entity based on curated mechanism of action
+        target {
+          # Open Targets target id
+          id
+          # Approved gene name
+          approvedName
+          # HGNC approved symbol
+          approvedSymbol
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,55 @@
+# Query Name: targetDiseaseEvidence
+# Entity Type: evidence
+# Description: Fetches evidence for target-disease associations with IntOgen data
+# Variables:
+# None (uses hardcoded efoId: EFO_0005952, ensemblIds: ENSG00000172936,
+#  datasourceIds: intogen)
+# Pagination Behavior: Full results
+# Notes:
+# Returns IntOgen evidence including mutated samples, functional consequences,
+#  and cohort information. Tested 2025-11-21, count=9
+#
+# Last Updated: 2025-11-21
+query targetDiseaseEvidence {
+  # Return a Disease
+  disease(efoId: "EFO_0005952") {
+    # Open Targets disease id
+    id
+    # Disease name
+    name
+    # The complete list of all possible datasources
+    evidences(datasourceIds: ["intogen"], ensemblIds: ["ENSG00000172936"]) {
+      count
+      rows {
+        # Disease evidence
+        disease {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+        }
+        diseaseFromSource
+        # Target evidence
+        target {
+          # Open Targets target id
+          id
+          # HGNC approved symbol
+          approvedSymbol
+        }
+        mutatedSamples {
+          functionalConsequence {
+            id
+            label
+          }
+          numberSamplesTested
+          numberMutatedSamples
+        }
+        resourceScore
+        significantDriverMethods
+        cohortId
+        cohortShortName
+        cohortDescription
+      }
+    }
+  }
+}

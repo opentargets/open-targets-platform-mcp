@@ -1,0 +1,39 @@
+# Query Name: EvaSomaticSummaryFragment
+# Entity Type: evidence
+# Description:
+# Retrieves the count of EVA somatic evidence entries for a target-disease
+#  association from the ClinVar Somatic datasource (eva_somatic). Used to
+#  display summary statistics showing the number of somatic mutation evidence.
+# Variables:
+# ensgId: String! (Example: ENSG00000157764), efoId: String! (Example:
+#  EFO_0000756)
+# Pagination Behavior: Full results
+# Notes:
+# Originally a fragment, converted to standalone query. Query successfully
+#  tested with BRAF (ENSG00000157764) + melanoma (EFO_0000756), returned
+#  count=1. Also tested with TP53 (ENSG00000141510) + breast cancer
+#  (MONDO_0007254), returned count=35. Uses size=0 parameter to retrieve only
+#  count without fetching evidence rows for efficient summary display. Returns
+#  total number of EVA somatic evidence entries without pagination. Used by
+#  Summary component in EVASomatic section to display entry count (e.g., '1
+#  entry' or '35 entries'). Related to EvaSomaticQuery.gql which fetches full
+#  evidence details including variants, clinical significance, allele origins,
+#  and literature references with cursor-based pagination.
+#
+# Last Updated: 2025-11-21
+query EvaSomaticSummaryFragment($ensgId: String!, $efoId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    eva_somatic: evidences(
+      ensemblIds: [$ensgId]
+      enableIndirect: true
+      datasourceIds: ["eva_somatic"]
+      size: 0
+    ) {
+      count
+    }
+  }
+}

@@ -1,0 +1,27 @@
+# Query Name: IndicationsSummaryFragment
+# Entity Type: drug
+# Description:
+# Retrieves the count of indications (approved therapeutic uses) for a drug to
+#  display in the Indications section summary
+# Variables: chemblId: String!
+# Pagination Behavior: Full results - no pagination
+# Notes:
+# Originally a fragment, converted to standalone query. Successfully tested
+#  with CHEMBL1201585 (vemurafenib), returned count=75 indications. Used by
+#  Summary component to display indication count in section header (e.g., '75
+#  indications'). Simple count query without pagination. Related to
+#  IndicationsQuery.gql which fetches full indication details including
+#  disease info, therapeutic areas, max phase, and references.
+#
+# Last Updated: 2025-11-21
+query IndicationsSummaryFragment($chemblId: String!) {
+  # Return a drug
+  drug(chemblId: $chemblId) {
+    # Open Targets molecule id
+    id
+    # Investigational and approved indications curated from clinical trial records and post-marketing package inserts
+    indications {
+      count
+    }
+  }
+}

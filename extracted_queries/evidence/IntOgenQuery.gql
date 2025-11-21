@@ -1,0 +1,90 @@
+# Query Name: IntOgenQuery
+# Entity Type: evidence
+# Description:
+# Fetches IntOGen cancer driver evidence for a target-disease pair, including
+#  mutation data, driver methods, cohort information, and the target's role in
+#  cancer from hallmarks data.
+# Variables:
+# ensemblId: String! (Example: ENSG00000157764), efoId: String! (Example:
+#  EFO_0000756), size: Int! (Example: 3500)
+# Pagination Behavior: Paginated (batch: 3500/page, may auto-fetch all)
+# Notes:
+# Query executes successfully. Tested with BRAF (ENSG00000157764) + melanoma
+#  (EFO_0000756), returned count=8 with complete data for 8 cohorts including
+#  TCGA_WXS_MEL (227 mutated samples), HARTWIG_WGS_SKCM_2023 (152 samples),
+#  and CBIOP_WXS_CM_VALLEN_2018 (70 samples). Each row includes disease
+#  mapping (melanoma, cutaneous melanoma), diseaseFromSource (e.g.,
+#  'Melanoma', 'Cutaneous Melanoma'), target approvedSymbol (BRAF),
+#  mutatedSamples with functional consequences (gain_of_function_variant
+#  SO:0002053), numberSamplesTested/numberMutatedSamples counts, resourceScore
+#  (combined p-values ranging from 1.4e-61 to 5.1e-7),
+#  significantDriverMethods arrays (oncodrivefml, oncodriveclustl, dndscv,
+#  smregions, cbase, mutpanning, hotmaps), and cohort information (cohortId,
+#  cohortShortName, cohortDescription). Target hallmarks section returns role
+#  in cancer ('oncogene'), fusion partners (TIF1A, TRIM4, SND1), function
+#  summary (serine/threonine kinase in RAS-ERK pathway), impact of V600E
+#  mutation (kinase hyperactivity), and literature PMIDs. Uses standard
+#  pagination with size parameter (default 3500 from sectionsBaseSizeQuery
+#  constant). enableIndirect=true includes related disease evidence. IntOGen
+#  specializes in cancer driver genes from somatic point mutations. Query
+#  makes parallel requests to both disease.evidences and target.hallmarks
+#  endpoints to combine evidence and target characterization data.
+#
+# Last Updated: 2025-11-21
+query IntOgenQuery($ensemblId: String!, $efoId: String!, $size: Int!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    intOgen: evidences(
+      ensemblIds: [$ensemblId]
+      enableIndirect: true
+      datasourceIds: ["intogen"]
+      size: $size
+    ) {
+      count
+      rows {
+        # Disease evidence
+        disease {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+        }
+        diseaseFromSource
+        # Target evidence
+        target {
+          # HGNC approved symbol
+          approvedSymbol
+        }
+        mutatedSamples {
+          functionalConsequence {
+            id
+            label
+          }
+          numberSamplesTested
+          numberMutatedSamples
+        }
+        resourceScore
+        significantDriverMethods
+        cohortId
+        cohortShortName
+        cohortDescription
+      }
+    }
+  }
+  # Return a Target
+  target(ensemblId: $ensemblId) {
+    # Open Targets target id
+    id
+    # Target-modulated essential alterations in cell physiology that dictate malignant growth
+    hallmarks {
+      attributes {
+        description
+        pmid
+        name
+      }
+    }
+  }
+}

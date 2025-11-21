@@ -1,0 +1,74 @@
+{
+  "clinical-genetics": {
+    "description": "Clinical genetics databases and rare disease evidence from ClinGen, ClinVar, Genomics England PanelApp, Orphanet, and Gene2Phenotype. Provides clinical validity of gene-disease relationships, pathogenic variants, and clinical genomics panels."
+  },
+  "literature-evidence": {
+    "description": "Scientific literature and bibliographic data from Europe PMC and UniProt, including disease and drug bibliographies. Supports text-mined evidence and citation networks."
+  },
+  "cancer-genomics": {
+    "description": "Cancer-specific genomic evidence from Cancer Gene Census, IntOGen, cancer biomarkers databases, and cancer hallmarks. Identifies cancer driver genes and somatic mutations."
+  },
+  "experimental-models": {
+    "description": "Experimental model organism data including CRISPR knockout screens, mouse phenotypes from IMPC, cancer cell line dependency from DepMap, and chemical probes. Provides functional validation data from laboratory experiments."
+  },
+  "validation-evidence": {
+    "description": "Target validation and drug discovery project evidence including validation experiments, Open Targets projects, and TEP (Target Enabling Package) data. Shows experimental support for therapeutic hypotheses."
+  },
+  "gwas-associations": {
+    "description": "Genome-wide association studies (GWAS) and trait associations. Returns GWAS summary statistics, shared trait studies, and disease-associated genetic variants from population-scale studies."
+  },
+  "qtl-genetics": {
+    "description": "Quantitative trait loci (QTL) studies including eQTL, pQTL, and other molecular QTL. Shows how genetic variation affects gene expression, protein levels, and other molecular phenotypes."
+  },
+  "credible-sets": {
+    "description": "Fine-mapping results and credible set analysis from GWAS and QTL studies. Includes locus-to-gene predictions, colocalization analyses, and probabilistic identification of causal variants."
+  },
+  "variant-annotation": {
+    "description": "Variant functional annotation and population genetics. Includes variant effect predictions (VEP), European Variation Archive data, UniProt variant annotations, and predicted functional consequences of genetic variation."
+  },
+  "genetic-constraint": {
+    "description": "Genetic constraint metrics and gene burden analysis. Measures selection pressure on genes including loss-of-function intolerance, showing which genes are essential for survival."
+  },
+  "drug-indications": {
+    "description": "Approved and investigational drug indications, clinical trial phases, mechanism-based predictions for drug repurposing, and known drug-disease relationships."
+  },
+  "drug-mechanisms": {
+    "description": "Drug mechanisms of action and target interactions from ChEMBL, including drug-target relationships, polypharmacology profiles, and molecular mechanisms of therapeutic effects."
+  },
+  "drug-safety": {
+    "description": "Post-market drug safety and pharmacovigilance data from FDA FAERS, including adverse events, drug warnings, and safety alerts for approved medications."
+  },
+  "pharmacogenomics": {
+    "description": "Genetic variation affecting drug response, including gene-drug interactions, genotype-dependent efficacy or toxicity, and personalized medicine applications."
+  },
+  "target-safety": {
+    "description": "Target safety liabilities and toxicity predictions based on adverse events, animal toxicology, and clinical safety flags. Assesses potential risks of modulating a therapeutic target."
+  },
+  "target-tractability": {
+    "description": "Target druggability and tractability assessments, including small molecule and antibody tractability predictions. Evaluates the likelihood of successfully developing drugs against a target."
+  },
+  "protein-structure": {
+    "description": "Protein structure, domains, and subcellular localization data. Includes 3D structures, ProtVista features, molecular structure predictions, and structural annotations."
+  },
+  "molecular-interactions": {
+    "description": "Protein-protein interactions and molecular networks for understanding biological context, cellular pathways, and functional relationships between biomolecules."
+  },
+  "comparative-genomics": {
+    "description": "Cross-species comparative genomics and orthology relationships for leveraging model organism data. Shows evolutionary conservation and functional predictions based on homology."
+  },
+  "functional-genomics": {
+    "description": "Gene expression, biological pathways, and systems biology data from Expression Atlas, Reactome, Gene Ontology, and PROGENy. Provides context on gene function, regulation, and pathway involvement."
+  },
+  "disease-phenotypes": {
+    "description": "Disease phenotypes, symptoms, and ontology for understanding clinical manifestations, disease classifications, and relationships between different conditions."
+  },
+  "disease-associations": {
+    "description": "Target-disease association evidence and prioritization, integrating evidence across multiple data types. Shows the strength of association between genes/targets and diseases."
+  },
+  "entity-profiles": {
+    "description": "Entity profile pages providing comprehensive summaries for diseases, targets, drugs, variants, and studies. Single-page views aggregating all available information for a specific entity."
+  },
+  "entity-search": {
+    "description": "Cross-entity search and entity discovery across all entity types with keyword search capabilities. Enables finding targets, diseases, drugs, variants, and studies by name or identifier."
+  }
+}

@@ -1,0 +1,54 @@
+# Query Name: DrugWarningsQuery
+# Entity Type: drug
+# Description:
+# Retrieves drug safety warnings, withdrawals, and black box warnings from
+#  regulatory agencies including FDA and EMA with toxicity classifications and
+#  references
+# Variables: chemblId: String!
+# Pagination Behavior: Full results - no pagination
+# Notes:
+# Query executes successfully. Tested with CHEMBL1201585 (vemurafenib),
+#  returned 3 Black Box Warnings with toxicity classes (teratogenicity,
+#  respiratory toxicity, cardiotoxicity), country information (United States),
+#  and references from DailyMed and FDA. Also returns hasBeenWithdrawn=false
+#  and blackBoxWarning=true flags. Includes efoIdForWarningClass mappings for
+#  toxicity classes. No pagination - returns all drug warnings in a single
+#  response.
+#
+# Last Updated: 2025-11-21
+query DrugWarningsQuery($chemblId: String!) {
+  # Return a drug
+  drug(chemblId: $chemblId) {
+    # Open Targets molecule id
+    id
+    # Warnings present on drug as identified by ChEMBL.
+    drugWarnings {
+      # Either 'black box warning' or 'withdrawn'
+      warningType
+      # Reason for withdrawal
+      description
+      # High level toxicity category by Meddra System Organ Class
+      toxicityClass
+      # Country issuing warning
+      country
+      # Year of withdrawal
+      year
+      #  label of the curated EFO term that represents the adverse outcome
+      efoTerm
+      # ID of the curated EFO term that represents the adverse outcome
+      efoId
+      # ID of the curated EFO term that represents the high level warning class
+      efoIdForWarningClass
+      # Source of withdrawal information
+      references {
+        id
+        source
+        url
+      }
+    }
+    # Has drug been withdrawn from the market
+    hasBeenWithdrawn
+    # Alert on life-threteaning drug side effects provided by FDA
+    blackBoxWarning
+  }
+}

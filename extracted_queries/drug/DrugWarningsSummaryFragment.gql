@@ -1,0 +1,26 @@
+# Query Name: DrugWarningsSummaryFragment
+# Entity Type: drug
+# Description:
+# Fragment for retrieving drug warning summary information, specifically
+#  whether the drug has been withdrawn and if it has a black box warning. Used
+#  to display warning badges on drug summary pages.
+# Variables: chemblId: String!
+# Pagination Behavior: Full results - no pagination in fragment
+# Notes:
+# Fragment converted to standalone query. Successfully tested with vemurafenib
+#  (CHEMBL1201585), returned hasBeenWithdrawn=false and blackBoxWarning=true.
+#  Used by Summary component to display warning status in section header.
+#  Simple fragment without pagination.
+#
+# Last Updated: 2025-11-21
+query DrugWarningsSummaryFragment($chemblId: String!) {
+  # Return a drug
+  drug(chemblId: $chemblId) {
+    # Open Targets molecule id
+    id
+    # Has drug been withdrawn from the market
+    hasBeenWithdrawn
+    # Alert on life-threteaning drug side effects provided by FDA
+    blackBoxWarning
+  }
+}

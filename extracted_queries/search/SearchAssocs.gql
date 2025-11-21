@@ -1,0 +1,26 @@
+# Query Name: searchTargetAggregations
+# Entity Type: search
+# Description:
+# Retrieves search result aggregations showing total count and breakdown by
+#  entity type
+# Variables: None (uses hardcoded queryString: PCSK9)
+# Pagination Behavior: Full results
+# Notes:
+# Returns aggregations with total and entities array showing count breakdown
+#  by entity type (disease study target drug). Successfully tested with PCSK9
+#  returning total=428 (360 diseases 29 studies 29 targets 10 drugs).
+#
+# Last Updated: 2025-11-21
+query searchTargetAggregations {
+  # Multi entity search
+  search(queryString: "PCSK9") {
+    # Aggregations
+    aggregations {
+      total
+      entities {
+        total
+        name
+      }
+    }
+  }
+}

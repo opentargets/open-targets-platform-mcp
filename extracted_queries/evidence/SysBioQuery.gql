@@ -1,0 +1,72 @@
+# Query Name: SysBioQuery
+# Entity Type: evidence
+# Description:
+# Fetches literature-reported Systems Biology evidence defining gene
+#  signatures causally associating a target gene with a disease. Retrieves
+#  evidence from systems biology studies that identify gene sets/pathways
+#  associated with disease phenotypes.
+# Variables:
+# ensemblId: String! (Example: ENSG00000157764), efoId: String! (Example:
+#  EFO_0000756), size: Int! (Example: 3500)
+# Pagination Behavior: Paginated (batch: 3500/page by default)
+# Notes:
+# Query validated successfully with correct structure. Tested with BRAF
+#  (ENSG00000157764) + melanoma (EFO_0000756), returned count=0 indicating
+#  sparse data coverage. Uses size-based pagination where size parameter
+#  controls maximum number of rows returned. Default size is 3500
+#  (sectionsBaseSizeQuery constant). Returns count field showing total matches
+#  and rows array with evidence. Query uses enableIndirect=true to include
+#  indirect disease associations and datasourceIds=['sysbio'] to filter to
+#  Systems Biology data source. Response structure includes
+#  target.approvedSymbol, disease (id, name), studyOverview (study
+#  description), literature (array of PMID references), and pathways (gene set
+#  names). No fragments to inline - self-contained query. Related to
+#  SysBioSummaryFragment.gql which fetches only count for summary display.
+#  SysBio appears to be a specialized evidence type with limited coverage
+#  across target-disease pairs. Query structure is correct and will return
+#  data when sysbio evidence exists for a given target-disease combination.
+#
+# Last Updated: 2025-11-21
+query SysBioQuery($ensemblId: String!, $efoId: String!, $size: Int!) {
+  # Return a Target
+  target(ensemblId: $ensemblId) {
+    # HGNC approved symbol
+    approvedSymbol
+  }
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    sysBio: evidences(
+      ensemblIds: [$ensemblId]
+      enableIndirect: true
+      datasourceIds: ["sysbio"]
+      size: $size
+    ) {
+      count
+      rows {
+        # Disease evidence
+        disease {
+          # Open Targets disease id
+          id
+          # Disease name
+          name
+        }
+        # Target evidence
+        target {
+          # Open Targets target id
+          id
+          # HGNC approved symbol
+          approvedSymbol
+        }
+        studyOverview
+        # list of pub med publications ids
+        literature
+        pathways {
+          name
+        }
+      }
+    }
+  }
+}

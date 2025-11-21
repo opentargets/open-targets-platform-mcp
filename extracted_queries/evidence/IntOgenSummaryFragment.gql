@@ -1,0 +1,28 @@
+# Query Name: IntOgenSummaryQuery
+# Entity Type: evidence
+# Description:
+# Retrieves evidence count from IntOgen cancer driver database datasource for
+#  target-disease associations
+# Variables: ensgId: String!, efoId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Summary query using size: 0 to return only count. Successfully tested with
+#  EFO_0000685 and ENSG00000157764.
+#
+# Last Updated: 2025-11-21
+query IntOgenSummaryQuery($ensgId: String!, $efoId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # Open Targets disease id
+    id
+    # The complete list of all possible datasources
+    intOgen: evidences(
+      ensemblIds: [$ensgId]
+      enableIndirect: true
+      datasourceIds: ["intogen"]
+      size: 0
+    ) {
+      count
+    }
+  }
+}

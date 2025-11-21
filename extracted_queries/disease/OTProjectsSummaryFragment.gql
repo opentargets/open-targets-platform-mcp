@@ -1,0 +1,28 @@
+# Query Name: OTProjectsSummaryFragment
+# Entity Type: disease
+# Description:
+# Fragment that fetches OTAR project codes for a disease to display count in
+#  summary. Returns just project codes used to calculate project count in
+#  Summary component.
+# Variables: efoId: String!
+# Pagination Behavior: Full results
+# Notes:
+# Originally a fragment, converted to standalone query. Query structurally
+#  valid and executes successfully. Tested with EFO_0000685 (rheumatoid
+#  arthritis) and MONDO_0004975, both returned empty arrays (expected - OTAR
+#  projects are private/restricted data). Returns array of otarProjects with
+#  otarCode field. Used by Summary component to display project count. No
+#  pagination - returns complete list. Related to full query
+#  OTProjectsQuery.gql which includes additional fields (status, projectName,
+#  reference, integratesInPPP).
+#
+# Last Updated: 2025-11-21
+query OTProjectsSummaryFragment($efoId: String!) {
+  # Return a Disease
+  disease(efoId: $efoId) {
+    # RNA and Protein baseline expression
+    otarProjects {
+      otarCode
+    }
+  }
+}

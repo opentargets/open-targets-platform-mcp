@@ -1,0 +1,40 @@
+# Query Name: MechanismsOfActionSummaryFragment
+# Entity Type: drug
+# Description:
+# Fetches mechanisms of action summary for a drug, including unique action
+#  types, unique target types, and parent/child molecule relationships
+# Variables: chemblId: String! (Example: CHEMBL1201585 for vemurafenib)
+# Pagination Behavior: Full results - no pagination
+# Notes:
+# Originally a fragment, converted to standalone query. Successfully tested
+#  with CHEMBL1201585 (vemurafenib), returned uniqueActionTypes=['INHIBITOR'],
+#  uniqueTargetTypes=['single protein'], parentMolecule=null,
+#  childMolecules=[]. Used by Summary component to display mechanism of action
+#  overview. Provides high-level summary of drug mechanisms without detailed
+#  target information.
+#
+# Last Updated: 2025-11-21
+query MechanismsOfActionSummaryFragment($chemblId: String!) {
+  # Return a drug
+  drug(chemblId: $chemblId) {
+    # Mechanisms of action to produce intended pharmacological effects. Curated from scientific literature and post-marketing package inserts
+    mechanismsOfAction {
+      uniqueActionTypes
+      uniqueTargetTypes
+    }
+    # ChEMBL ID of parent molecule
+    parentMolecule {
+      # Open Targets molecule id
+      id
+      # Molecule preferred name
+      name
+    }
+    # Chembl IDs of molecules that descend from current molecule.
+    childMolecules {
+      # Open Targets molecule id
+      id
+      # Molecule preferred name
+      name
+    }
+  }
+}
