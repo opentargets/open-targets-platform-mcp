@@ -1,6 +1,8 @@
 """Tool for providing example GraphQL queries for the OpenTargets API."""
 
+import json
 from pathlib import Path
+from typing import Any
 
 from otar_mcp.mcp_instance import mcp
 
@@ -12,6 +14,48 @@ def _get_extracted_queries_path() -> Path:
     current_file = Path(__file__)
     project_root = current_file.parent.parent.parent.parent
     return project_root / "extracted_queries"
+
+
+def _get_mappers_path() -> Path:
+    """Get the absolute path to the mappers directory."""
+    current_file = Path(__file__)
+    project_root = current_file.parent.parent.parent.parent
+    return project_root / "mappers"
+
+
+def _load_category_descriptors() -> dict[str, Any]:
+    """Load category descriptors from JSON file."""
+    mappers_path = _get_mappers_path()
+    descriptors_file = mappers_path / "category_descriptors.json"
+    with open(descriptors_file, encoding="utf-8") as f:
+        return json.load(f)  # type: ignore[no-any-return]
+
+
+def _load_category_query_mapper() -> dict[str, Any]:
+    """Load category to query name mapping from JSON file."""
+    mappers_path = _get_mappers_path()
+    mapper_file = mappers_path / "category_query_mapper.json"
+    with open(mapper_file, encoding="utf-8") as f:
+        return json.load(f)  # type: ignore[no-any-return]
+
+
+def _build_query_index() -> dict[str, Path]:
+    """Build an index mapping query names to their file paths.
+
+    Returns:
+        Dictionary mapping query name (without .gql extension) to Path object
+    """
+    queries_dir = _get_extracted_queries_path()
+    query_index = {}
+
+    # Search all entity-type subdirectories for .gql files
+    for entity_dir in queries_dir.iterdir():
+        if entity_dir.is_dir() and not entity_dir.name.startswith((".", "__")):
+            for gql_file in entity_dir.glob("*.gql"):
+                query_name = gql_file.stem  # filename without extension
+                query_index[query_name] = gql_file
+
+    return query_index
 
 
 def _clean_comment_line(line: str) -> str:
@@ -145,50 +189,40 @@ def _format_queries_as_markdown(queries_by_category: dict) -> str:
     return "\n".join(markdown_parts)
 
 
-@mcp.tool(name="get_open_targets_query_examples")
-def get_open_targets_query_examples(categories: list[str]) -> str:
-    """Retrieve example GraphQL queries for the Open Targets API organized by category.
+def _generate_docstring() -> str:
+    """Generate the docstring dynamically from category descriptors."""
+    try:
+        category_descriptors = _load_category_descriptors()
+    except Exception:
+        # Fallback if descriptors can't be loaded
+        return """Retrieve example GraphQL queries for the Open Targets API organized by category.
+
+    Args:
+        categories: List of category names to include.
+
+    Returns:
+        str: Markdown-formatted documentation containing all queries from the requested categories.
+    """
+
+    # Build category list from descriptors
+    category_lines = []
+    for category, info in sorted(category_descriptors.items()):
+        description = info.get("description", "")
+        category_lines.append(f"    - **{category}**: {description}")
+
+    categories_text = "\n".join(category_lines)
+
+    return f"""Retrieve example GraphQL queries for the Open Targets API organized by category.
 
     This tool loads query examples from the extracted_queries directory and formats them
     as comprehensive markdown documentation. The examples demonstrate common use cases
     and can be used as templates for writing custom queries.
 
-    Available categories and their contents:
-
-    - **target**: A therapeutic drug target representing a gene or protein. Queries return
-      information about tractability, safety, baseline expression, molecular interactions,
-      chemical probes, and gene essentiality data for specific targets.
-
-    - **disease**: A medical condition or phenotypic trait associated with potential
-      therapeutic interventions. Queries retrieve clinical signs and symptoms, disease
-      classifications, and connections to relevant targets and drugs.
-
-    - **drug**: A therapeutic compound or medication. Queries provide clinical precedence
-      information, pharmacovigilance data, pharmacogenetics profiles, and associations
-      with disease targets and clinical outcomes.
-
-    - **evidence**: Target-disease associations supported by experimental or clinical data.
-      The platform integrates publicly available datasets to score these relationships
-      and assist in drug target prioritization.
-
-    - **study**: A research investigation (GWAS, QTL studies) contributing data to the
-      platform. Queries return study metadata, associated variants, and findings relevant
-      to target-disease associations.
-
-    - **variant**: A genetic sequence variation (SNPs, mutations). Queries retrieve genomic
-      coordinates, disease associations, functional annotations, and connections to GWAS
-      data and fine-mapping results.
-
-    - **credibleset**: A collection of potentially causal genetic variants identified through
-      fine-mapping analysis. Queries return variant groupings, posterior probabilities,
-      and locus-specific information.
-
-    - **search**: A query interface across all platform entities, enabling users to discover
-      targets, diseases, drugs, evidence, studies, variants, and credible sets through
-      keyword or structured searches.
+    Available categories:
+{categories_text}
 
     Args:
-        categories: List of category names to include (e.g., ["target", "disease", "drug"]).
+        categories: List of category names to include (e.g., ["clinical-genetics", "cancer-genomics"]).
                    Must be one or more of the available categories listed above.
 
     Returns:
@@ -197,30 +231,33 @@ def get_open_targets_query_examples(categories: list[str]) -> str:
 
     Raises:
         ValueError: If an invalid category is provided or if no categories are specified
-        FileNotFoundError: If the extracted_queries directory does not exist
+        FileNotFoundError: If required files or directories do not exist
 
     Example:
-        >>> examples = get_open_targets_query_examples(["target", "disease"])
-        >>> # Returns markdown with all target and disease query examples
+        >>> examples = get_open_targets_query_examples(["clinical-genetics", "cancer-genomics"])
+        >>> # Returns markdown with all clinical genetics and cancer genomics query examples
     """
-    # Get path to extracted_queries directory
-    queries_dir = _get_extracted_queries_path()
 
-    if not queries_dir.exists():
-        msg = (
-            f"Extracted queries directory not found at {queries_dir}. "
-            "Please ensure the extracted_queries folder exists in the project root."
-        )
-        raise FileNotFoundError(msg)
 
-    # Get valid categories from directory structure
-    valid_categories = {
-        d.name
-        for d in queries_dir.iterdir()
-        if d.is_dir() and not d.name.startswith(".") and not d.name.startswith("__")
-    }
+# Generate docstring at module load time (before decorator is applied)
+_DYNAMIC_DOCSTRING = _generate_docstring()
+
+
+def get_open_targets_query_examples(categories: list[str]) -> str:
+    """Placeholder docstring - will be replaced dynamically."""
+    # Load category information and mappings
+    try:
+        category_descriptors = _load_category_descriptors()
+        category_query_mapper = _load_category_query_mapper()
+    except FileNotFoundError as e:
+        msg = f"Required mapper file not found: {e}"
+        raise FileNotFoundError(msg) from e
+
+    # Build query index (query name -> file path)
+    query_index = _build_query_index()
 
     # Validate categories
+    valid_categories = set(category_descriptors.keys())
     requested_categories = set(categories)
     invalid = requested_categories - valid_categories
     if invalid:
@@ -232,19 +269,25 @@ def get_open_targets_query_examples(categories: list[str]) -> str:
     queries_by_category = {}
 
     for category in categories:
-        category_path = queries_dir / category
-
-        # Find all .gql files in this category
-        gql_files = sorted(category_path.glob("*.gql"))
+        # Get query names for this category from the mapper
+        query_names = category_query_mapper.get(category, [])
 
         queries = []
-        for gql_file in gql_files:
+        for query_name in query_names:
+            # Look up the file path for this query
+            query_file = query_index.get(query_name)
+
+            if query_file is None:
+                # Query name not found in any entity directory
+                print(f"Warning: Query '{query_name}' not found in extracted_queries")
+                continue
+
             try:
-                query_data = _parse_query_file(gql_file)
+                query_data = _parse_query_file(query_file)
                 queries.append(query_data)
             except Exception as e:
                 # If parsing fails, skip this file but continue
-                print(f"Warning: Failed to parse {gql_file}: {e}")
+                print(f"Warning: Failed to parse {query_file}: {e}")
                 continue
 
         if queries:
@@ -254,3 +297,10 @@ def get_open_targets_query_examples(categories: list[str]) -> str:
     markdown_output = _format_queries_as_markdown(queries_by_category)
 
     return markdown_output
+
+
+# Set the dynamic docstring BEFORE applying the decorator
+get_open_targets_query_examples.__doc__ = _DYNAMIC_DOCSTRING
+
+# Now apply the decorator
+get_open_targets_query_examples = mcp.tool(name="get_open_targets_query_examples")(get_open_targets_query_examples)  # type: ignore[assignment]
