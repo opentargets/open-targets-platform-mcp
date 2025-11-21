@@ -1,0 +1,535 @@
+{
+  "TargetAssociationsQuery": [
+    "disease-associations"
+  ],
+  "TargetPageQuery": [
+    "entity-profiles"
+  ],
+  "TargetProfileHeaderQuery": [
+    "entity-profiles"
+  ],
+  "DiseaseAssociationsQuery": [
+    "disease-associations"
+  ],
+  "DiseasePageQuery": [
+    "entity-profiles"
+  ],
+  "DiseaseProfileHeaderQuery": [
+    "entity-profiles"
+  ],
+  "DrugPageQuery": [
+    "entity-profiles"
+  ],
+  "DrugProfileHeaderQuery": [
+    "entity-profiles"
+  ],
+  "VariantProfileHeaderQuery": [
+    "entity-profiles"
+  ],
+  "VariantPageQuery": [
+    "entity-profiles"
+  ],
+  "StudyPageQuery": [
+    "entity-profiles"
+  ],
+  "StudyProfileHeaderQuery": [
+    "entity-profiles"
+  ],
+  "EvidencePageQuery": [
+    "entity-profiles"
+  ],
+  "CredibleSetPageQuery": [
+    "entity-profiles"
+  ],
+  "SearchPageQuery": [
+    "entity-search"
+  ],
+  "CredibleSetProfileHeaderFragment": [
+    "entity-profiles"
+  ],
+  "GWASColocQuery": [
+    "credible-sets"
+  ],
+  "GWASColocSummaryFragment": [
+    "credible-sets"
+  ],
+  "Locus2GeneQuery": [
+    "credible-sets"
+  ],
+  "MolQTLColocSummaryFragment": [
+    "credible-sets"
+  ],
+  "Locus2GeneQueryFragment": [
+    "credible-sets"
+  ],
+  "MolQTLColocQuery": [
+    "credible-sets"
+  ],
+  "VariantsQuery": [
+    "credible-sets"
+  ],
+  "VariantsSummaryFragment": [
+    "credible-sets"
+  ],
+  "OTProjectsQuery": [
+    "validation-evidence"
+  ],
+  "DiseaseBibliography": [
+    "literature-evidence"
+  ],
+  "OntologyQuery": [
+    "disease-phenotypes"
+  ],
+  "OTProjectsSummaryFragment": [
+    "validation-evidence"
+  ],
+  "OntologySummaryFragment": [
+    "disease-phenotypes"
+  ],
+  "PhenotypesQuery": [
+    "disease-phenotypes"
+  ],
+  "AdverseEventsSummaryFragment": [
+    "drug-safety"
+  ],
+  "AdverseEventsQuery": [
+    "drug-safety"
+  ],
+  "IndicationsQuery": [
+    "drug-indications"
+  ],
+  "DrugWarningsSummaryFragment": [
+    "drug-safety"
+  ],
+  "DrugWarningsQuery": [
+    "drug-safety"
+  ],
+  "IndicationsSummaryFragment": [
+    "drug-indications"
+  ],
+  "LinkedTargetsQuery": [
+    "drug-mechanisms"
+  ],
+  "MechanismsOfActionSummaryFragment": [
+    "drug-mechanisms"
+  ],
+  "MechanismsOfActionSectionQuery": [
+    "drug-mechanisms"
+  ],
+  "CrisprSummaryFragment": [
+    "experimental-models"
+  ],
+  "CrisprQuery": [
+    "experimental-models"
+  ],
+  "CrisprScreenSummaryFragment": [
+    "experimental-models"
+  ],
+  "CrisprScreenQuery": [
+    "experimental-models"
+  ],
+  "CancerGeneCensusSummaryFragment": [
+    "cancer-genomics"
+  ],
+  "CancerBiomarkersEvidenceFragment": [
+    "cancer-genomics"
+  ],
+  "CancerGeneCensusQuery": [
+    "cancer-genomics"
+  ],
+  "CancerBiomarkersQuery": [
+    "cancer-genomics"
+  ],
+  "ChemblSummaryFragment": [
+    "drug-mechanisms"
+  ],
+  "ChemblQuery": [
+    "drug-mechanisms"
+  ],
+  "ClinGenSummaryFragment": [
+    "clinical-genetics"
+  ],
+  "ClingenQuery": [
+    "clinical-genetics"
+  ],
+  "EvaSomaticQuery": [
+    "variant-annotation"
+  ],
+  "ClinvarQuery": [
+    "clinical-genetics"
+  ],
+  "EvaSomaticSummaryFragment": [
+    "variant-annotation"
+  ],
+  "EuropePmcSummaryFragment": [
+    "literature-evidence"
+  ],
+  "EuropePMCQuery": [
+    "literature-evidence"
+  ],
+  "ExpressionAtlasSummary": [
+    "functional-genomics"
+  ],
+  "ExpressionAtlasQuery": [
+    "functional-genomics"
+  ],
+  "ExpressionAtlasSummaryFragment": [
+    "functional-genomics"
+  ],
+  "Gene2PhenotypeQuery": [
+    "clinical-genetics"
+  ],
+  "Gene2PhenotypeSummaryFragment": [
+    "clinical-genetics"
+  ],
+  "GwasCredibleSetsQuery": [
+    "gwas-associations",
+    "credible-sets"
+  ],
+  "GenomicsEnglandSummaryFragment": [
+    "clinical-genetics"
+  ],
+  "GenomicsEnglandQuery": [
+    "clinical-genetics"
+  ],
+  "GeneBurdenSummaryFragment": [
+    "genetic-constraint"
+  ],
+  "GeneBurdenQuery": [
+    "genetic-constraint"
+  ],
+  "IntOgenQuery": [
+    "cancer-genomics"
+  ],
+  "OTEncoreSummaryFragment": [
+    "validation-evidence"
+  ],
+  "OTCrisprQuery": [
+    "experimental-models"
+  ],
+  "OrphanetSummaryFragment": [
+    "clinical-genetics"
+  ],
+  "OTValidationSummaryFragment": [
+    "validation-evidence"
+  ],
+  "OrphanetQuery": [
+    "clinical-genetics"
+  ],
+  "ValidationQuery": [
+    "validation-evidence"
+  ],
+  "ProgenyQuery": [
+    "functional-genomics"
+  ],
+  "ProgenySummaryFragment": [
+    "functional-genomics"
+  ],
+  "SlapEnrichQuery": [
+    "functional-genomics"
+  ],
+  "SysBioQuery": [
+    "functional-genomics"
+  ],
+  "SysBioSummaryFragment": [
+    "functional-genomics"
+  ],
+  "UniprotLiteratureQuery": [
+    "literature-evidence"
+  ],
+  "UniprotVariantsQuery": [
+    "variant-annotation"
+  ],
+  "SharedTraitStudiesQuery": [
+    "gwas-associations"
+  ],
+  "SharedTraitStudiesSummaryFragment": [
+    "gwas-associations"
+  ],
+  "CancerHallmarksSummaryFragment": [
+    "cancer-genomics"
+  ],
+  "ChemicalProbesSummaryFragment": [
+    "experimental-models"
+  ],
+  "CompGenomicsSummaryFragment": [
+    "comparative-genomics"
+  ],
+  "DepmapSummaryFragment": [
+    "experimental-models"
+  ],
+  "ExpressionQuery": [
+    "functional-genomics"
+  ],
+  "ExpressionSummaryFragment": [
+    "functional-genomics"
+  ],
+  "GeneOntologySummaryFragment": [
+    "functional-genomics"
+  ],
+  "GeneticConstraintFragment": [
+    "genetic-constraint"
+  ],
+  "MolecularInteractionsSummary": [
+    "molecular-interactions"
+  ],
+  "InteractionsSectionQuery": [
+    "molecular-interactions"
+  ],
+  "MousePhenotypesSummary": [
+    "experimental-models"
+  ],
+  "MousePhenotypes": [
+    "experimental-models"
+  ],
+  "ProtVistaQuery": [
+    "protein-structure"
+  ],
+  "InteractionsStatsQuery": [
+    "molecular-interactions"
+  ],
+  "InteractionsSectionQuery_String": [
+    "molecular-interactions"
+  ],
+  "PathwaysSummary": [
+    "functional-genomics"
+  ],
+  "OverlappingVariantsSummary": [
+    "variant-annotation"
+  ],
+  "OverlappingVariantsQuery": [
+    "variant-annotation"
+  ],
+  "Pathways": [
+    "functional-genomics"
+  ],
+  "Safety": [
+    "target-safety"
+  ],
+  "SafetySummary": [
+    "target-safety"
+  ],
+  "SubcellularLocation": [
+    "protein-structure"
+  ],
+  "TargetQTLCredibleSetsSummary": [
+    "credible-sets",
+    "qtl-genetics"
+  ],
+  "SubcellularLocationFragment": [
+    "protein-structure"
+  ],
+  "TractabilitySummary": [
+    "target-tractability"
+  ],
+  "TractabilityQuery": [
+    "target-tractability"
+  ],
+  "IntervalsSummaryFragment": [
+    "variant-annotation"
+  ],
+  "EVASummary": [
+    "variant-annotation"
+  ],
+  "IntervalsQuery": [
+    "variant-annotation"
+  ],
+  "EVAQuery": [
+    "variant-annotation"
+  ],
+  "VariantGWASCredibleSetsSummary": [
+    "credible-sets"
+  ],
+  "QTLCredibleSetsSummary": [
+    "qtl-genetics"
+  ],
+  "MolecularStructureQuery": [
+    "protein-structure"
+  ],
+  "VariantEffectPredictorSummary": [
+    "variant-annotation"
+  ],
+  "VariantEffectPredictorQuery": [
+    "variant-annotation"
+  ],
+  "VariantEffectQuery": [
+    "variant-annotation"
+  ],
+  "VariantEffectSummary": [
+    "variant-annotation"
+  ],
+  "ChemicalProbes": [
+    "experimental-models"
+  ],
+  "CompGenomics": [
+    "comparative-genomics"
+  ],
+  "Depmap": [
+    "experimental-models"
+  ],
+  "DiseaseKnownDrugsSummary": [
+    "drug-indications"
+  ],
+  "DrugBibliographyQuery": [
+    "literature-evidence"
+  ],
+  "DrugKnownDrugsSummaryQuery": [
+    "drug-indications"
+  ],
+  "DrugPharmacogenomicsSummaryQuery": [
+    "pharmacogenomics"
+  ],
+  "EVASummaryQuery": [
+    "variant-annotation"
+  ],
+  "EncoreQuery": [
+    "validation-evidence"
+  ],
+  "EntitiesSummaryQuery": [
+    "entity-search"
+  ],
+  "GeneOntology": [
+    "functional-genomics"
+  ],
+  "GeneticConstraint": [
+    "genetic-constraint"
+  ],
+  "Hallmarks": [
+    "cancer-genomics"
+  ],
+  "IMPCSummaryQuery": [
+    "experimental-models"
+  ],
+  "IntOgenSummaryQuery": [
+    "cancer-genomics"
+  ],
+  "LinkedTargetsSummaryQuery": [
+    "drug-mechanisms"
+  ],
+  "OTCrisprSummaryQuery": [
+    "experimental-models"
+  ],
+  "PhenotypesSummaryQuery": [
+    "disease-phenotypes"
+  ],
+  "QTLCredibleSetsSummaryQuery": [
+    "qtl-genetics"
+  ],
+  "ReactomePathwaysSummaryQuery": [
+    "functional-genomics"
+  ],
+  "SlapEnrichSummaryQuery": [
+    "functional-genomics"
+  ],
+  "UniprotLiteratureSummaryQuery": [
+    "literature-evidence"
+  ],
+  "UniprotVariantsSummaryQuery": [
+    "variant-annotation"
+  ],
+  "associatedDiseases": [
+    "disease-associations"
+  ],
+  "associatedTargets": [
+    "disease-associations"
+  ],
+  "diseaseAnnotation": [
+    "disease-associations"
+  ],
+  "drugApprovalWithdrawnWarningData": [
+    "drug-safety"
+  ],
+  "impcQuery": [
+    "experimental-models"
+  ],
+  "reactomeQuery": [
+    "functional-genomics"
+  ],
+  "searchEntity": [
+    "entity-search"
+  ],
+  "searchTargetAggregations": [
+    "entity-search"
+  ],
+  "targetAnnotation": [
+    "disease-associations"
+  ],
+  "targetDiseaseEvidence": [
+    "disease-associations"
+  ],
+  "UniProtVariantsSummaryQuery": [
+    "variant-annotation"
+  ],
+  "UniProtVariantsQuery": [
+    "variant-annotation"
+  ],
+  "VariantPharmacogenomicsQuery": [
+    "pharmacogenomics"
+  ],
+  "VariantQTLCredibleSetsQuery": [
+    "qtl-genetics"
+  ],
+  "DiseaseKnownDrugsQuery": [
+    "drug-indications"
+  ],
+  "TargetPharmacogenomicsSummary": [
+    "pharmacogenomics"
+  ],
+  "StudyQTLCredibleSetsQuery": [
+    "qtl-genetics"
+  ],
+  "StudyGWASCredibleSetsQuery": [
+    "credible-sets"
+  ],
+  "StudyGWASCredibleSetsSummaryFragment": [
+    "credible-sets"
+  ],
+  "TargetSimilarEntitiesQuery": [
+    "entity-search"
+  ],
+  "EvidenceGWASCredibleSetsSummaryFragment": [
+    "credible-sets"
+  ],
+  "DiseaseSimilarEntitiesQuery": [
+    "entity-search"
+  ],
+  "TargetKnownDrugsQuery": [
+    "drug-indications"
+  ],
+  "TargetQTLCredibleSetsQuery": [
+    "qtl-genetics"
+  ],
+  "DiseaseGWASStudiesQuery": [
+    "gwas-associations"
+  ],
+  "StudyGWASStudiesQuery": [
+    "gwas-associations"
+  ],
+  "VariantPharmacogenomicsSummary": [
+    "pharmacogenomics"
+  ],
+  "VariantGWASCredibleSetsQuery": [
+    "credible-sets"
+  ],
+  "TargetMolecularStructureSummary": [
+    "protein-structure"
+  ],
+  "VariantMolecularStructureSummary": [
+    "protein-structure"
+  ],
+  "TargetPharmacogenomicsQuery": [
+    "pharmacogenomics"
+  ],
+  "DrugSimilarEntitiesQuery": [
+    "entity-search"
+  ],
+  "DrugKnownDrugsQuery": [
+    "drug-indications"
+  ],
+  "DrugPharmacogenomicsQuery": [
+    "pharmacogenomics"
+  ],
+  "TargetKnownDrugsSummaryFragment": [
+    "drug-indications"
+  ]
+}
