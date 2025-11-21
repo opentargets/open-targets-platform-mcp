@@ -241,3 +241,7 @@ This project is licensed under the terms of the license specified in [LICENSE](L
 ---
 
 Repository initiated with [fpgmaas/cookiecutter-uv](https://github.com/fpgmaas/cookiecutter-uv).
+
+## Acknowledgements
+
+We would like to thank the developers from [@biocontext-ai](https://github.com/biocontext-ai) whose implementation of a GraphQL-based MCP server served as an inspiration for this project.
