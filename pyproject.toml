@@ -34,6 +34,11 @@ Homepage = "https://fcarli.github.io/otar-mcp/"
 Repository = "https://github.com/fcarli/otar-mcp"
 Documentation = "https://fcarli.github.io/otar-mcp/"
 
+[project.optional-dependencies]
+semantic = [
+    "sentence-transformers>=5.1.2",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=7.2.0",
@@ -69,6 +74,14 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "rank_bm25"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "sentence_transformers"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "numpy"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
