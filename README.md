@@ -6,6 +6,8 @@
 [![Commit activity](https://img.shields.io/github/commit-activity/m/opentargets/otar-mcp)](https://github.com/opentargets/otar-mcp/commits)
 [![License](https://img.shields.io/github/license/opentargets/otar-mcp)](https://github.com/opentargets/otar-mcp/blob/main/LICENSE)
 
+> **⚠️ DISCLAIMER: This project is currently experimental and under active development. Features, APIs, and documentation may change without notice ⚠️**
+
 **Model Context Protocol (MCP) server for the [OpenTargets Platform API](https://platform.opentargets.org/)**
 
 This package provides an MCP server that enables AI assistants like Claude to interact with the OpenTargets Platform, a comprehensive resource for target-disease associations and drug discovery data.
