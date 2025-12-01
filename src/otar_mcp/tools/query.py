@@ -38,14 +38,10 @@ def query_open_targets_graphql(
         Example: search_entity(query_string="BRCA2", entity_names=["target"])
 
     Step 2: LEARN QUERY STRUCTURE
-        Call `get_open_targets_query_examples` with relevant categories
-        (e.g., ["target", "disease", "drug"]) to see proper syntax, fields,
-        and structure. Use examples as templates.
-
-        If examples lack needed field details OR if you encounter query errors,
-        call `get_open_targets_graphql_schema` for complete type definitions.
-        NOTE: The schema tool is expensive in terms of tokens - only use it when
-        examples don't provide the right information or after encountering errors.
+        Call `get_open_targets_graphql_schema` to retrieve the full API schema.
+        Study the schema to understand available types, fields, and their
+        relationships, then construct a GraphQL query that fetches the
+        information the user needs.
 
     Step 3: CONSTRUCT QUERY WITH JQ FILTER
         Build GraphQL query using:
