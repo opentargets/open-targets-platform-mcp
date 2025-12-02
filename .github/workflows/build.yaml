@@ -18,15 +18,19 @@ jobs:
       id-token: write
     env:
       REPO: ${{ github.event.repository.name }}
+      GCP_PROJECT_ID: open-targets-eu-dev
+      GCP_REGION: europe-west1
+      TAG: "${{ github.ref_name}}"
 
     steps:
       - uses: actions/checkout@v4
 
       - id: auth-google
-        uses: google-github-actions/auth@v2
+        name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
         with:
           token_format: access_token
-          project_id: 'open-targets-eu-dev'
+          project_id: ${{ env.GCP_PROJECT_ID }}
           workload_identity_provider: projects/426265110888/locations/global/workloadIdentityPools/github-actions/providers/opentargets
           service_account: github-actions@open-targets-eu-dev.iam.gserviceaccount.com
           access_token_lifetime: 300s
@@ -35,7 +39,7 @@ jobs:
         name: Login to Google Artifact Registry
         uses: docker/login-action@v3
         with:
-          registry: europe-west1-docker.pkg.dev
+          registry: ${{ env.GCP_REGION }}-docker.pkg.dev
           username: oauth2accesstoken
           password: ${{ steps.auth-google.outputs.access_token }}
 
@@ -46,12 +50,17 @@ jobs:
           context: .
           push: true
           tags: |
-            europe-west1-docker.pkg.dev/open-targets-eu-dev/platform-mcp/${{ env.REPO }}:latest
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ env.TAG }}
+            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/opentargets/${{ env.REPO }}:latest
+            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/opentargets/${{ env.REPO }}:${{ env.TAG }}
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
 
       - id: generate-attestations
         name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v3
         with:
-          subject-name: europe-west1-docker.pkg.dev/open-targets-eu-dev/platform-mcp/${{ env.REPO }}
+          subject-name: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/platform-mcp/${{ env.REPO }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
