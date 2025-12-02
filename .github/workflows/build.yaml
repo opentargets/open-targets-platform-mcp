@@ -5,8 +5,7 @@ on:
     branches: [ "build-pipeline" ]
     # Publish semver tags as releases.
     tags: [ 'v*.*.*' ]
-  pull_request:
-    branches: [ "build-pipeline" ]
+  workflow_dispatch:
 
 jobs:
   build:
