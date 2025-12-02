@@ -43,14 +43,6 @@ jobs:
           username: oauth2accesstoken
           password: ${{ steps.auth-google.outputs.access_token }}
 
-      - id: auth-ghcr
-        name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - id: push
         name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -58,8 +50,6 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ env.TAG }}
             ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/opentargets/${{ env.REPO }}:latest
             ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/opentargets/${{ env.REPO }}:${{ env.TAG }}
           # cache-from: type=gha
