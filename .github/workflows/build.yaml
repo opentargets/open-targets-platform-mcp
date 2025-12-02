@@ -1,0 +1,58 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches: [ "build-pipeline" ]
+    # Publish semver tags as releases.
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ "build-pipeline" ]
+
+jobs:
+  build:
+    name: Build and push 🚢
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    env:
+      REPO: ${{ github.event.repository.name }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth-google
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          project_id: 'open-targets-eu-dev'
+          workload_identity_provider: projects/426265110888/locations/global/workloadIdentityPools/github-actions/providers/opentargets
+          service_account: github-actions@open-targets-eu-dev.iam.gserviceaccount.com
+          access_token_lifetime: 300s
+
+      - id: auth-gar
+        name: Login to Google Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: europe-west1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth-google.outputs.access_token }}
+
+      - id: push
+        name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            europe-west1-docker.pkg.dev/open-targets-eu-dev/platform-mcp/${{ env.REPO }}:latest
+
+      - id: generate-attestations
+        name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: europe-west1-docker.pkg.dev/open-targets-eu-dev/platform-mcp/${{ env.REPO }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true

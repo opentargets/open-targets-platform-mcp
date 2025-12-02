@@ -1,0 +1,56 @@
+# Git
+.git
+.gitignore
+.github
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.mypy_cache
+.ruff_cache
+
+# Virtual environments
+.venv
+venv
+env
+ENV
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Documentation
+*.md
+!README.md
+
+# Tests
+tests
+test_*.py
+*_test.py
+
+# Development files
+Makefile
+tox.ini
+.pre-commit-config.yaml
+
+# Utils scripts (not needed in runtime)
+utils_scripts
+
+# Lock file (we use frozen install, but uv.lock is needed)
+# Actually, we need uv.lock for frozen install, so don't ignore it
+
