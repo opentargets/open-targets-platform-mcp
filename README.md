@@ -17,8 +17,8 @@ This package provides an MCP server that enables AI assistants like Claude to in
 - [Features](#features)
 - [Available Tools](#available-tools)
 - [Strategy](#strategy)
-- [Installation](#installation)
 - [Usage](#usage)
+- [Local Installation](#local-installation)
 - [JQ Filtering](#jq-filtering-optional)
 - [Development](#development)
 - [Contributing](#contributing)
@@ -71,9 +71,42 @@ Tool selection:
 - `query_open_targets_graphql` for single queries
 - `batch_query_open_targets_graphql` for multiple identical queries with different parameters (reduces latency and tokens)
 
-## Installation
+## Usage
 
-### Using uv (recommended)
+### Hosted Service (Recommended)
+
+The easiest way to use OpenTargets MCP is through the hosted service provided by Open Targets infrastructure.
+
+#### Claude Desktop Configuration
+
+Add this configuration to your Claude Desktop config file:
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "otar-mcp": {
+      "type": "url",
+      "url": "https://mcp.platform.opentargets.org/mcp"
+    }
+  }
+}
+```
+
+> **Note**: The hosted service uses [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http). The URL above is a placeholder - the actual endpoint will be announced when the service is deployed on Open Targets infrastructure.
+
+### Local Installation
+
+For development, testing, or running your own instance, you can install and run the MCP server locally.
+
+#### Prerequisites
+
+- Python 3.11+
+- [uv](https://github.com/astral-sh/uv) package manager
+
+#### Installation
 
 ```bash
 git clone https://github.com/opentargets/otar-mcp.git
@@ -81,20 +114,7 @@ cd otar-mcp
 uv sync
 ```
 
-### Using pip
-
-```bash
-pip install git+https://github.com/opentargets/otar-mcp.git
-```
-
-## Usage
-
-### Claude Desktop Integration (Stdio Transport)
-
-Add this configuration to your Claude Desktop config file:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+#### Claude Desktop Configuration (Local)
 
 ```json
 {
@@ -135,51 +155,24 @@ To enable jq filtering support (see [JQ Filtering](#jq-filtering-optional) secti
 }
 ```
 
-### Command Line Usage
-
-#### Start HTTP server (for testing/development)
+#### Command Line Usage
 
 ```bash
-# Using uv
+# Start HTTP server (for testing/development)
 uv run otar-mcp serve-http
+uv run otar-mcp serve-http --host 127.0.0.1 --port 8000
+uv run otar-mcp serve-http --jq  # with jq filtering
 
-# Using installed package
-otar-mcp serve-http --host 127.0.0.1 --port 8000
-
-# With jq filtering enabled
-otar-mcp serve-http --jq
-```
-
-#### Start stdio server
-
-```bash
-# Using uv
+# Start stdio server
 uv run otar-mcp serve-stdio
+uv run otar-mcp serve-stdio --jq  # with jq filtering
 
-# Using installed package
-otar-mcp serve-stdio
-
-# With jq filtering enabled
-otar-mcp serve-stdio --jq
-```
-
-#### List available tools
-
-```bash
-# List tools without jq support (default)
+# List available tools
 uv run otar-mcp list-tools
-
-# List tools with jq support
-uv run otar-mcp list-tools --jq
+uv run otar-mcp list-tools --jq  # show tools with jq support
 ```
 
-#### Run as a Python module
-
-```bash
-python -m otar_mcp serve-http
-```
-
-### Environment Variables
+#### Environment Variables
 
 Configure the server using environment variables:
 
