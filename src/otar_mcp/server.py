@@ -6,7 +6,7 @@ from otar_mcp.mcp_instance import mcp
 
 # Import tool modules to register them with the MCP instance
 # These imports trigger the @mcp.tool() decorators
-from otar_mcp.tools import batch_query, examples, query, schema, search, search_entity, semantic_search  # noqa: F401
+from otar_mcp.tools import batch_query, query, schema, search  # noqa: F401
 
 
 def setup_server() -> FastMCP:
