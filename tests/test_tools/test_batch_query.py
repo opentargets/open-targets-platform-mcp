@@ -4,14 +4,10 @@ from unittest.mock import patch
 
 import pytest
 
-from otar_mcp.tools.batch_query import batch_query_open_targets_graphql
+from otar_mcp.tools.batch_query import _batch_query_impl
 
-# Access the underlying function (the decorated function is a FunctionTool)
-batch_query_fn = (
-    batch_query_open_targets_graphql.fn
-    if hasattr(batch_query_open_targets_graphql, "fn")
-    else batch_query_open_targets_graphql
-)
+# Use the internal implementation function directly for testing
+batch_query_fn = _batch_query_impl
 
 
 class TestBatchQueryOpenTargetsGraphQL:
@@ -100,7 +96,7 @@ class TestBatchQueryOpenTargetsGraphQL:
         assert result["results"]["ENSG00000012048"]["status"] == "error"
 
     def test_batch_query_with_jq_filter(self, batch_query_string, batch_variables_with_key):
-        """Test batch query with jq filter applied."""
+        """Test batch query with jq filter applied (when jq is enabled)."""
         jq_filter = ".data.target.approvedSymbol"
 
         with patch("otar_mcp.tools.batch_query.execute_graphql_query") as mock_execute:
@@ -110,17 +106,52 @@ class TestBatchQueryOpenTargetsGraphQL:
                 {"result": "BRCA2"},
             ]
 
-            result = batch_query_fn(
-                query_string=batch_query_string,
-                variables_list=batch_variables_with_key,
-                key_field="ensemblId",
-                jq_filter=jq_filter,
-            )
+            # Enable jq for this test
+            with patch("otar_mcp.tools.batch_query.config") as mock_config:
+                mock_config.jq_enabled = True
+                mock_config.api_endpoint = "https://api.platform.opentargets.org/api/v4/graphql"
+
+                result = batch_query_fn(
+                    query_string=batch_query_string,
+                    variables_list=batch_variables_with_key,
+                    key_field="ensemblId",
+                    jq_filter=jq_filter,
+                )
 
         # Verify jq_filter was passed to execute_graphql_query
         assert mock_execute.call_count == 3
         for call in mock_execute.call_args_list:
             assert call[1]["jq_filter"] == jq_filter
+
+        assert result["status"] == "success"
+
+    def test_batch_query_jq_filter_ignored_when_disabled(self, batch_query_string, batch_variables_with_key):
+        """Test that jq filter is ignored when jq is disabled."""
+        jq_filter = ".data.target.approvedSymbol"
+
+        with patch("otar_mcp.tools.batch_query.execute_graphql_query") as mock_execute:
+            mock_execute.side_effect = [
+                {"status": "success", "data": {"target": {"id": "ENSG00000141510"}}},
+                {"status": "success", "data": {"target": {"id": "ENSG00000012048"}}},
+                {"status": "success", "data": {"target": {"id": "ENSG00000139618"}}},
+            ]
+
+            # Disable jq for this test
+            with patch("otar_mcp.tools.batch_query.config") as mock_config:
+                mock_config.jq_enabled = False
+                mock_config.api_endpoint = "https://api.platform.opentargets.org/api/v4/graphql"
+
+                result = batch_query_fn(
+                    query_string=batch_query_string,
+                    variables_list=batch_variables_with_key,
+                    key_field="ensemblId",
+                    jq_filter=jq_filter,
+                )
+
+        # Verify jq_filter was NOT passed (should be None)
+        assert mock_execute.call_count == 3
+        for call in mock_execute.call_args_list:
+            assert call[1]["jq_filter"] is None
 
         assert result["status"] == "success"
 
@@ -154,6 +185,7 @@ class TestBatchQueryOpenTargetsGraphQL:
 
             with patch("otar_mcp.tools.batch_query.config") as mock_config:
                 mock_config.api_endpoint = "https://test.api/graphql"
+                mock_config.jq_enabled = False
 
                 batch_query_fn(
                     query_string=batch_query_string, variables_list=[batch_variables_with_key[0]], key_field="ensemblId"
@@ -210,12 +242,17 @@ class TestBatchQueryOpenTargetsGraphQL:
                 "warning": "jq filter failed: null value",
             }
 
-            result = batch_query_fn(
-                query_string=batch_query_string,
-                variables_list=[batch_variables_with_key[0]],
-                key_field="ensemblId",
-                jq_filter=".data.target.missing",
-            )
+            # Enable jq for this test
+            with patch("otar_mcp.tools.batch_query.config") as mock_config:
+                mock_config.jq_enabled = True
+                mock_config.api_endpoint = "https://api.platform.opentargets.org/api/v4/graphql"
+
+                result = batch_query_fn(
+                    query_string=batch_query_string,
+                    variables_list=[batch_variables_with_key[0]],
+                    key_field="ensemblId",
+                    jq_filter=".data.target.missing",
+                )
 
         # The warning should still be in the result
         assert "warning" in result["results"]["ENSG00000141510"]
@@ -259,28 +296,38 @@ class TestBatchQueryIntegration:
         assert result["results"]["ENSG00000012048"]["data"]["target"]["approvedSymbol"] == "BRCA1"
 
     def test_real_batch_query_with_jq_filter(self):
-        """Test real batch query with jq filter."""
-        query = """
-        query GetTarget($ensemblId: String!) {
-            target(ensemblId: $ensemblId) {
-                id
-                approvedSymbol
+        """Test real batch query with jq filter (requires jq enabled)."""
+        from otar_mcp.config import config
+
+        # Enable jq for this integration test
+        original_jq_enabled = config.jq_enabled
+        config.jq_enabled = True
+
+        try:
+            query = """
+            query GetTarget($ensemblId: String!) {
+                target(ensemblId: $ensemblId) {
+                    id
+                    approvedSymbol
+                }
             }
-        }
-        """
+            """
 
-        variables_list = [
-            {"ensemblId": "ENSG00000141510"},
-            {"ensemblId": "ENSG00000012048"},
-        ]
+            variables_list = [
+                {"ensemblId": "ENSG00000141510"},
+                {"ensemblId": "ENSG00000012048"},
+            ]
 
-        result = batch_query_fn(
-            query_string=query,
-            variables_list=variables_list,
-            key_field="ensemblId",
-            jq_filter=".data.target.approvedSymbol",
-        )
+            result = batch_query_fn(
+                query_string=query,
+                variables_list=variables_list,
+                key_field="ensemblId",
+                jq_filter=".data.target.approvedSymbol",
+            )
 
-        assert result["status"] == "success"
-        assert result["results"]["ENSG00000141510"]["result"] == "TP53"
-        assert result["results"]["ENSG00000012048"]["result"] == "BRCA1"
+            assert result["status"] == "success"
+            assert result["results"]["ENSG00000141510"]["result"] == "TP53"
+            assert result["results"]["ENSG00000012048"]["result"] == "BRCA1"
+        finally:
+            # Restore original value
+            config.jq_enabled = original_jq_enabled

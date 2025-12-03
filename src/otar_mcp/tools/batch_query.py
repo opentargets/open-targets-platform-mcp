@@ -6,87 +6,148 @@ from pydantic import Field
 
 from otar_mcp.client.graphql import execute_graphql_query
 from otar_mcp.config import config
-from otar_mcp.mcp_instance import mcp
+
+# ============================================================================
+# Docstring Variants
+# ============================================================================
+
+DOCSTRING_WITH_JQ = """Execute the same GraphQL query multiple times with different variable sets.
+
+Use this tool instead of the regular query tool when you need to run the same query
+repeatedly with different arguments (e.g., querying multiple drugs, targets, or diseases).
+
+WORKFLOW - Follow these steps in order:
+
+Step 1: RESOLVE IDENTIFIERS
+    If user provides common names (gene symbols, disease names, drug names),
+    use `search_entity` tool FIRST to convert them to standardized IDs:
+
+    - Targets/Genes: "BRCA1", "BRCA2" -> ENSEMBL IDs "ENSG00000012048", "ENSG00000139618"
+    - Diseases: "breast cancer" -> EFO/MONDO ID "MONDO_0007254"
+    - Drugs: "aspirin", "ibuprofen" -> ChEMBL IDs "CHEMBL1201583", "CHEMBL521"
+    - Variants: Use "chr_pos_ref_alt" format or rsIDs
+
+    Example: search_entity(query_string="BRCA1 BRCA2", entity_names=["target"])
+
+Step 2: LEARN QUERY STRUCTURE
+    Call `get_open_targets_graphql_schema` to retrieve the full API schema.
+    Study the schema to understand available types, fields, and their
+    relationships, then construct a GraphQL query that fetches the
+    information the user needs.
+
+Step 3: CONSTRUCT BATCH QUERY WITH JQ FILTER
+    Build GraphQL query and variables_list using:
+    - Standardized IDs from Step 1 (REQUIRED)
+    - Query patterns from Step 2
+    - jq filter for targeted information extraction
+
+    JQ FILTER REQUIREMENT:
+    When you're after specific information, ALWAYS include a jq_filter to return
+    ONLY the requested fields. This achieves parsimony by reducing token consumption
+    and response size. Never return the full API response when only specific fields
+    are needed.
+
+    The jq filter is applied server-side to each query result before responses
+    are returned, extracting only the relevant data and discarding unnecessary fields.
+
+Step 4: EXECUTE
+    Call this tool with query_string, variables_list, key_field, and jq_filter.
+
+REQUIRED IDENTIFIER FORMATS:
+- Targets/Genes: ENSEMBL IDs (e.g., "ENSG00000139618")
+- Diseases: EFO IDs (e.g., "EFO_0000305") or MONDO IDs (e.g., "MONDO_0007254")
+- Drugs: ChEMBL IDs (e.g., "CHEMBL1201583")
+- Variants: "chr_pos_ref_alt" format (e.g., "19_44908822_C_T") or rsIDs (e.g., "rs7412")
+- Studies: Study IDs (e.g., "GCST90002357")
+- Credible Sets: Study Locus IDs (e.g., "7d68cc9c70351c9dbd2a2c0c145e555d")
+
+Args:
+    query_string: The GraphQL query string to execute for all variable sets
+    variables_list: List of variable dictionaries, one per query execution
+    key_field: Variable field name to use as key in results mapping (e.g., "chemblId")
+    jq_filter: Optional jq filter applied identically and individually to all query results
+
+Returns:
+    dict: Results keyed by the specified field value, with execution summary:
+        {
+            "status": "success",
+            "results": {
+                "<key_value>": {"status": "success", "data": ...},
+                ...
+            },
+            "summary": {"total": <int>, "successful": <int>, "failed": <int>}
+        }
+"""
+
+DOCSTRING_WITHOUT_JQ = """Execute the same GraphQL query multiple times with different variable sets.
+
+Use this tool instead of the regular query tool when you need to run the same query
+repeatedly with different arguments (e.g., querying multiple drugs, targets, or diseases).
+
+WORKFLOW - Follow these steps in order:
+
+Step 1: RESOLVE IDENTIFIERS
+    If user provides common names (gene symbols, disease names, drug names),
+    use `search_entity` tool FIRST to convert them to standardized IDs:
+
+    - Targets/Genes: "BRCA1", "BRCA2" -> ENSEMBL IDs "ENSG00000012048", "ENSG00000139618"
+    - Diseases: "breast cancer" -> EFO/MONDO ID "MONDO_0007254"
+    - Drugs: "aspirin", "ibuprofen" -> ChEMBL IDs "CHEMBL1201583", "CHEMBL521"
+    - Variants: Use "chr_pos_ref_alt" format or rsIDs
+
+    Example: search_entity(query_string="BRCA1 BRCA2", entity_names=["target"])
+
+Step 2: LEARN QUERY STRUCTURE
+    Call `get_open_targets_graphql_schema` to retrieve the full API schema.
+    Study the schema to understand available types, fields, and their
+    relationships, then construct a GraphQL query that fetches the
+    information the user needs.
+
+Step 3: CONSTRUCT AND EXECUTE BATCH QUERY
+    Build GraphQL query and variables_list using:
+    - Standardized IDs from Step 1 (REQUIRED)
+    - Query patterns from Step 2
+
+    Call this tool with query_string, variables_list, and key_field.
+
+REQUIRED IDENTIFIER FORMATS:
+- Targets/Genes: ENSEMBL IDs (e.g., "ENSG00000139618")
+- Diseases: EFO IDs (e.g., "EFO_0000305") or MONDO IDs (e.g., "MONDO_0007254")
+- Drugs: ChEMBL IDs (e.g., "CHEMBL1201583")
+- Variants: "chr_pos_ref_alt" format (e.g., "19_44908822_C_T") or rsIDs (e.g., "rs7412")
+- Studies: Study IDs (e.g., "GCST90002357")
+- Credible Sets: Study Locus IDs (e.g., "7d68cc9c70351c9dbd2a2c0c145e555d")
+
+Args:
+    query_string: The GraphQL query string to execute for all variable sets
+    variables_list: List of variable dictionaries, one per query execution
+    key_field: Variable field name to use as key in results mapping (e.g., "chemblId")
+
+Returns:
+    dict: Results keyed by the specified field value, with execution summary:
+        {
+            "status": "success",
+            "results": {
+                "<key_value>": {"status": "success", "data": ...},
+                ...
+            },
+            "summary": {"total": <int>, "successful": <int>, "failed": <int>}
+        }
+"""
 
 
-@mcp.tool(name="batch_query_open_targets_graphql")
-def batch_query_open_targets_graphql(
-    query_string: Annotated[str, Field(description="GraphQL query string")],
-    variables_list: Annotated[list[dict], Field(description="List of variables for each query execution")],
-    key_field: Annotated[str, Field(description="Variable field to use as result key")],
-    jq_filter: Annotated[Optional[str], Field(description="Optional jq filter applied to all results")] = None,
+# ============================================================================
+# Core Implementation (not decorated)
+# ============================================================================
+
+
+def _batch_query_impl(
+    query_string: str,
+    variables_list: list[dict],
+    key_field: str,
+    jq_filter: Optional[str] = None,
 ) -> dict:
-    """Execute the same GraphQL query multiple times with different variable sets.
-
-    Use this tool instead of the regular query tool when you need to run the same query
-    repeatedly with different arguments (e.g., querying multiple drugs, targets, or diseases).
-
-    WORKFLOW - Follow these steps in order:
-
-    Step 1: RESOLVE IDENTIFIERS
-        If user provides common names (gene symbols, disease names, drug names),
-        use `search_entity` tool FIRST to convert them to standardized IDs:
-
-        - Targets/Genes: "BRCA1", "BRCA2" → ENSEMBL IDs "ENSG00000012048", "ENSG00000139618"
-        - Diseases: "breast cancer" → EFO/MONDO ID "MONDO_0007254"
-        - Drugs: "aspirin", "ibuprofen" → ChEMBL IDs "CHEMBL1201583", "CHEMBL521"
-        - Variants: Use "chr_pos_ref_alt" format or rsIDs
-
-        Example: search_entity(query_string="BRCA1 BRCA2", entity_names=["target"])
-
-    Step 2: LEARN QUERY STRUCTURE
-        Call `get_open_targets_query_examples` with relevant categories
-        (e.g., ["target", "disease", "drug"]) to see proper syntax, fields,
-        and structure. Use examples as templates.
-
-        If examples lack needed field details OR if you encounter query errors,
-        call `get_open_targets_graphql_schema` for complete type definitions.
-        NOTE: The schema tool is expensive in terms of tokens - only use it when
-        examples don't provide the right information or after encountering errors.
-
-    Step 3: CONSTRUCT BATCH QUERY WITH JQ FILTER
-        Build GraphQL query and variables_list using:
-        - Standardized IDs from Step 1 (REQUIRED)
-        - Query patterns from Step 2
-        - jq filter for targeted information extraction
-
-        JQ FILTER REQUIREMENT:
-        When you're after specific information, ALWAYS include a jq_filter to return
-        ONLY the requested fields. This achieves parsimony by reducing token consumption
-        and response size. Never return the full API response when only specific fields
-        are needed.
-
-        The jq filter is applied server-side to each query result before responses
-        are returned, extracting only the relevant data and discarding unnecessary fields.
-
-    Step 4: EXECUTE
-        Call this tool with query_string, variables_list, key_field, and jq_filter.
-
-    REQUIRED IDENTIFIER FORMATS:
-    - Targets/Genes: ENSEMBL IDs (e.g., "ENSG00000139618")
-    - Diseases: EFO IDs (e.g., "EFO_0000305") or MONDO IDs (e.g., "MONDO_0007254")
-    - Drugs: ChEMBL IDs (e.g., "CHEMBL1201583")
-    - Variants: "chr_pos_ref_alt" format (e.g., "19_44908822_C_T") or rsIDs (e.g., "rs7412")
-    - Studies: Study IDs (e.g., "GCST90002357")
-    - Credible Sets: Study Locus IDs (e.g., "7d68cc9c70351c9dbd2a2c0c145e555d")
-
-    Args:
-        query_string: The GraphQL query string to execute for all variable sets
-        variables_list: List of variable dictionaries, one per query execution
-        key_field: Variable field name to use as key in results mapping (e.g., "chemblId")
-        jq_filter: Optional jq filter applied identically and individually to all query results
-
-    Returns:
-        dict: Results keyed by the specified field value, with execution summary:
-            {
-                "status": "success",
-                "results": {
-                    "<key_value>": {"status": "success", "data": ...},
-                    ...
-                },
-                "summary": {"total": <int>, "successful": <int>, "failed": <int>}
-            }
-    """
+    """Internal implementation - handles both jq-enabled and disabled modes."""
     try:
         # Validate that variables_list is not empty
         if not variables_list:
@@ -97,6 +158,9 @@ def batch_query_open_targets_graphql(
         successful_count = 0
         failed_count = 0
         total_count = len(variables_list)
+
+        # Only use jq_filter if enabled
+        effective_jq_filter = jq_filter if config.jq_enabled else None
 
         # Execute queries sequentially
         # TODO: Add parallel execution support for better performance
@@ -121,7 +185,7 @@ def batch_query_open_targets_graphql(
                     endpoint_url=config.api_endpoint,
                     query_string=query_string,
                     variables=variables,
-                    jq_filter=jq_filter,
+                    jq_filter=effective_jq_filter,
                 )
 
                 # Check if the query execution itself failed
@@ -156,3 +220,27 @@ def batch_query_open_targets_graphql(
                 "failed": failed_count,
             },
         }
+
+
+# ============================================================================
+# Wrapper Functions for Registration
+# ============================================================================
+
+
+def batch_query_with_jq(
+    query_string: Annotated[str, Field(description="GraphQL query string")],
+    variables_list: Annotated[list[dict], Field(description="List of variables for each query execution")],
+    key_field: Annotated[str, Field(description="Variable field to use as result key")],
+    jq_filter: Annotated[Optional[str], Field(description="Optional jq filter applied to all results")] = None,
+) -> dict:
+    """Batch query with jq support - signature includes jq_filter."""
+    return _batch_query_impl(query_string, variables_list, key_field, jq_filter)
+
+
+def batch_query_without_jq(
+    query_string: Annotated[str, Field(description="GraphQL query string")],
+    variables_list: Annotated[list[dict], Field(description="List of variables for each query execution")],
+    key_field: Annotated[str, Field(description="Variable field to use as result key")],
+) -> dict:
+    """Batch query without jq support - signature excludes jq_filter."""
+    return _batch_query_impl(query_string, variables_list, key_field, None)

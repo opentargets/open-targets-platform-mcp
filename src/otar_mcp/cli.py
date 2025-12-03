@@ -5,7 +5,6 @@ import asyncio
 import click
 
 from otar_mcp.config import config
-from otar_mcp.server import setup_server
 
 
 @click.group()
@@ -28,34 +27,75 @@ def cli() -> None:
     help="Port to bind the HTTP server to",
     show_default=True,
 )
-def serve_http(host: str, port: int) -> None:
+@click.option(
+    "--jq/--no-jq",
+    default=False,
+    help="Enable jq filtering support for query tools",
+    show_default=True,
+)
+def serve_http(host: str, port: int, jq: bool) -> None:
     """Start the MCP server with HTTP transport.
 
     This mode is useful for testing and development, or when you need to
     access the MCP server over HTTP.
     """
+    # Set jq configuration BEFORE importing server
+    config.jq_enabled = jq
+
+    # Now import and setup server (triggers tool registration)
+    from otar_mcp.server import setup_server
+
     mcp = setup_server()
-    click.echo(f"Starting OpenTargets MCP server on http://{host}:{port}/mcp")
+
+    jq_status = "enabled" if jq else "disabled"
+    click.echo(f"Starting OpenTargets MCP server on http://{host}:{port}/mcp (jq filtering: {jq_status})")
     mcp.run(transport="http", host=host, port=port)
 
 
 @cli.command(name="serve-stdio")
-def serve_stdio() -> None:
+@click.option(
+    "--jq/--no-jq",
+    default=False,
+    help="Enable jq filtering support for query tools",
+    show_default=True,
+)
+def serve_stdio(jq: bool) -> None:
     """Start the MCP server with stdio transport.
 
     This is the standard transport for MCP servers and is used by
     Claude Desktop and other MCP clients.
     """
+    # Set jq configuration BEFORE importing server
+    config.jq_enabled = jq
+
+    # Now import and setup server (triggers tool registration)
+    from otar_mcp.server import setup_server
+
     mcp = setup_server()
-    click.echo("Starting OpenTargets MCP server with stdio transport", err=True)
+
+    jq_status = "enabled" if jq else "disabled"
+    click.echo(f"Starting OpenTargets MCP server with stdio transport (jq filtering: {jq_status})", err=True)
     mcp.run(transport="stdio")
 
 
 @cli.command(name="list-tools")
-def list_tools() -> None:
+@click.option(
+    "--jq/--no-jq",
+    default=False,
+    help="Show tools as they would appear with/without jq support",
+    show_default=True,
+)
+def list_tools(jq: bool) -> None:
     """List all available MCP tools."""
-    mcp = setup_server()  # Ensure tools are registered
-    click.echo("Available tools:")
+    # Set jq configuration to show appropriate tool signatures
+    config.jq_enabled = jq
+
+    from otar_mcp.server import setup_server
+
+    mcp = setup_server()
+
+    jq_status = "with jq support" if jq else "without jq support"
+    click.echo(f"Available tools ({jq_status}):")
 
     # Dynamically list all registered tools using public API
     tools = asyncio.run(mcp.get_tools())

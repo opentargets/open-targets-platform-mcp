@@ -17,86 +17,67 @@ This package provides an MCP server that enables AI assistants like Claude to in
 - [Features](#features)
 - [Available Tools](#available-tools)
 - [Strategy](#strategy)
-- [Installation](#installation)
 - [Usage](#usage)
+- [Local Installation](#local-installation)
+- [JQ Filtering](#jq-filtering-optional)
 - [Development](#development)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Features
 
-- 🔍 **GraphQL Schema Access**: Fetch and explore the complete OpenTargets GraphQL schema
+- 🔍 **GraphQL Schema Access**: Fetch and explore the complete OpenTargets GraphQL schema with detailed documentation
 - 📊 **Query Execution**: Execute custom GraphQL queries against the OpenTargets API
 - ⚡ **Batch Query Processing**: Execute the same query multiple times with different parameters efficiently
-- 🔎 **Entity Search**: Convert common names (gene symbols, disease names, drug names) to standardized IDs
-- 📚 **Curated Query Examples**: Access 150+ pre-built query examples organized by category
+- 🔎 **Entity Search**: Search for entities across multiple types (targets, diseases, drugs, variants, studies)
 - 🚀 **Multiple Transports**: Support for both stdio (Claude Desktop) and HTTP transports
 - 🛠️ **CLI Tools**: Easy-to-use command-line interface for server management
-- 🎯 **JQ Filtering**: Server-side JSON filtering to reduce token consumption and improve performance
+- 🎯 **JQ Filtering** (Optional): Server-side JSON filtering to reduce token consumption and improve performance
 
 ## Available Tools
 
 The MCP server provides the following tools:
 
-1. **get_open_targets_graphql_schema**: Fetch the complete GraphQL schema for the OpenTargets Platform API
+1. **get_open_targets_graphql_schema**: Fetch the complete GraphQL schema for the OpenTargets Platform API, including detailed documentation for all types and fields
 2. **query_open_targets_graphql**: Execute GraphQL queries to retrieve data about targets, diseases, drugs, and their associations
 3. **batch_query_open_targets_graphql**: Execute the same GraphQL query multiple times with different variable sets for efficient batch processing
-4. **search_entity**: Search for entities across multiple types (targets, diseases, drugs, variants, studies) and convert common names to standardized IDs
-5. **get_open_targets_query_examples**: Get pre-built example queries organized by category to help the agent in formulating required GraphQL queries
+4. **search_entity**: Search for entities across multiple types (targets, diseases, drugs, variants, studies) and retrieve their standardized IDs
 
 ## Strategy
 
-The MCP server implements a 4-step workflow that guides the LLM to efficiently retrieve data from the OpenTargets Platform:
+The MCP server implements a 3-step workflow that guides the LLM to efficiently retrieve data from the OpenTargets Platform:
 
-### Step 1: Resolve Identifiers
+### Step 1: Learn Query Structure from Schema
 
-When a user query contains common names (gene symbols, disease names, drug names), the LLM is guided to use the `search_entity` tool to convert them to standardized IDs required by the API:
+The LLM calls `get_open_targets_graphql_schema` to understand the GraphQL API structure. The schema includes detailed documentation for all types and fields, enabling the LLM to construct valid queries. Key entity types include:
 
-- **Targets/Genes**: "BRCA2" → ENSEMBL ID `ENSG00000139618`
-- **Diseases**: "breast cancer" → EFO/MONDO ID `MONDO_0007254`
-- **Drugs**: "aspirin" → ChEMBL ID `CHEMBL1201583`
-- **Variants**: "chr_pos_ref_alt" format or rsIDs
+- **Targets/Genes**: Use ENSEMBL IDs (e.g., `ENSG00000139618` for BRCA2)
+- **Diseases**: Use EFO/MONDO IDs (e.g., `MONDO_0007254` for breast cancer)
+- **Drugs**: Use ChEMBL IDs (e.g., `CHEMBL1201583` for aspirin)
+- **Variants**: Use "chr_pos_ref_alt" format or rsIDs
 
-### Step 2: Learn Query Structure
+### Step 2: Resolve Identifiers (if needed)
 
-The LLM calls `get_open_targets_query_examples` with relevant categories to understand proper GraphQL syntax, available fields, and query structure. Examples serve as templates for constructing queries.
+When a user query contains common names (gene symbols, disease names, drug names), the LLM uses `search_entity` to convert them to standardized IDs required by the API.
 
-If examples are insufficient or query errors occur, `get_open_targets_graphql_schema` provides complete type definitions (note: this is token-expensive and should only be used when necessary).
+### Step 3: Execute Query
 
-### Step 3: Construct Query with JQ Filter
+The LLM constructs and executes GraphQL queries using:
+- Standardized IDs from Step 2
+- Query structure from the schema
+- **jq filters** (optional, when enabled) to extract only requested fields, minimizing token consumption
 
-The LLM builds GraphQL queries using:
-- Standardized IDs from Step 1
-- Query patterns from Step 2
-- **jq filters** to extract only requested fields, minimizing token consumption
-
-The jq filter is applied server-side before returning the response, ensuring only relevant data is transmitted.
-
-### Step 4: Execute
-
-The LLM executes the query with appropriate tool selection:
+Tool selection:
 - `query_open_targets_graphql` for single queries
 - `batch_query_open_targets_graphql` for multiple identical queries with different parameters (reduces latency and tokens)
 
-## Installation
-
-### Using uv (recommended)
-
-```bash
-git clone https://github.com/opentargets/otar-mcp.git
-cd otar-mcp
-uv sync
-```
-
-### Using pip
-
-```bash
-pip install git+https://github.com/opentargets/otar-mcp.git
-```
-
 ## Usage
 
-### Claude Desktop Integration (Stdio Transport)
+### Hosted Service (Recommended)
+
+The easiest way to use OpenTargets MCP is through the hosted service provided by Open Targets infrastructure.
+
+#### Claude Desktop Configuration
 
 Add this configuration to your Claude Desktop config file:
 
@@ -107,56 +88,91 @@ Add this configuration to your Claude Desktop config file:
 {
   "mcpServers": {
     "otar-mcp": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "<your-path>/otar-mcp",
-        "fastmcp",
-        "run",
-        "src/otar_mcp/server.py"
-      ],
-      "transport": "stdio",
+      "type": "url",
+      "url": "https://mcp.platform.opentargets.org/mcp"
     }
   }
 }
 ```
 
-### Command Line Usage
+> **Note**: The hosted service uses [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http). The URL above is a placeholder - the actual endpoint will be announced when the service is deployed on Open Targets infrastructure.
 
-#### Start HTTP server (for testing/development)
+### Local Installation
+
+For development, testing, or running your own instance, you can install and run the MCP server locally.
+
+#### Prerequisites
+
+- Python 3.11+
+- [uv](https://github.com/astral-sh/uv) package manager
+
+#### Installation
 
 ```bash
-# Using uv
+git clone https://github.com/opentargets/otar-mcp.git
+cd otar-mcp
+uv sync
+```
+
+#### Claude Desktop Configuration (Local)
+
+```json
+{
+  "mcpServers": {
+    "otar-mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "<your-path>/otar-mcp",
+        "otar-mcp",
+        "serve-stdio"
+      ],
+      "transport": "stdio"
+    }
+  }
+}
+```
+
+To enable jq filtering support (see [JQ Filtering](#jq-filtering-optional) section):
+
+```json
+{
+  "mcpServers": {
+    "otar-mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "<your-path>/otar-mcp",
+        "otar-mcp",
+        "serve-stdio",
+        "--jq"
+      ],
+      "transport": "stdio"
+    }
+  }
+}
+```
+
+#### Command Line Usage
+
+```bash
+# Start HTTP server (for testing/development)
 uv run otar-mcp serve-http
+uv run otar-mcp serve-http --host 127.0.0.1 --port 8000
+uv run otar-mcp serve-http --jq  # with jq filtering
 
-# Using installed package
-otar-mcp serve-http --host 127.0.0.1 --port 8000
-```
-
-#### Start stdio server
-
-```bash
-# Using uv
+# Start stdio server
 uv run otar-mcp serve-stdio
+uv run otar-mcp serve-stdio --jq  # with jq filtering
 
-# Using installed package
-otar-mcp serve-stdio
-```
-
-#### List available tools
-
-```bash
+# List available tools
 uv run otar-mcp list-tools
+uv run otar-mcp list-tools --jq  # show tools with jq support
 ```
 
-#### Run as a Python module
-
-```bash
-python -m otar_mcp serve-http
-```
-
-### Environment Variables
+#### Environment Variables
 
 Configure the server using environment variables:
 
@@ -165,6 +181,48 @@ Configure the server using environment variables:
 - `MCP_HTTP_HOST`: HTTP server host (default: "127.0.0.1")
 - `MCP_HTTP_PORT`: HTTP server port (default: "8000")
 - `OPENTARGETS_TIMEOUT`: Request timeout in seconds (default: "30")
+- `OPENTARGETS_JQ_ENABLED`: Enable jq filtering support (default: "false")
+
+### JQ Filtering (Optional)
+
+The MCP server supports optional server-side JSON filtering using jq expressions. This feature is **disabled by default** to simplify the tool interface for most users.
+
+#### When to Enable JQ Filtering
+
+Enable jq filtering when:
+- You want to reduce token consumption by extracting only specific fields from API responses
+- Working with large API responses where only a subset of data is needed
+- The calling LLM is proficient at tool calling and can reliably construct jq filters
+
+Keep jq disabled (default) when:
+- Simplicity is preferred over optimization
+- Working with straightforward queries that don't benefit from filtering
+- The LLM should receive complete API responses
+
+#### Enabling JQ Filtering
+
+**Via CLI flag:**
+```bash
+otar-mcp serve-stdio --jq
+otar-mcp serve-http --jq
+```
+
+**Via environment variable:**
+```bash
+export OPENTARGETS_JQ_ENABLED=true
+otar-mcp serve-stdio
+```
+
+#### How JQ Filtering Works
+
+When jq filtering is enabled, the query tools expose a `jq_filter` parameter. The jq filter is applied server-side before the response is returned, extracting only the relevant data and discarding unnecessary fields.
+
+Example: To extract only the gene symbol and ID from a target query:
+```
+jq_filter: ".data.target | {id, symbol: .approvedSymbol}"
+```
+
+This significantly reduces token consumption by returning only the requested fields instead of the full API response.
 
 ## Development
 
@@ -207,35 +265,16 @@ otar-mcp/
 │   │   ├── schema.py        # Schema fetching tool
 │   │   ├── query.py         # Query execution tool
 │   │   ├── batch_query.py   # Batch query tool
-│   │   ├── examples.py      # Example queries tool
 │   │   ├── search.py        # Search tool
-│   │   ├── search_entity.py # Entity search tool
-│   │   └── semantic_search.py # Semantic search tool
+│   │   └── register.py      # Conditional tool registration
 │   └── utils/               # Utility functions
 │       └── __init__.py
 ├── tests/                   # Test suite
 │   ├── conftest.py
 │   ├── test_client/
 │   └── test_tools/
-├── extracted_queries/       # Pre-extracted GraphQL queries
-│   ├── credibleset/
-│   ├── disease/
-│   ├── drug/
-│   ├── evidence/
-│   ├── search/
-│   ├── study/
-│   ├── target/
-│   ├── variant/
-│   ├── queries_catalog.csv
-│   ├── query_embeddings.npy
-│   └── schema.graphql
-├── mappers/                 # Category and query mapping files
-│   ├── category_descriptors.json
-│   ├── category_query_mapper.json
-│   └── query_category_mapper.json
 └── utils_scripts/           # Utility scripts for maintenance
-    ├── annotate_schema_metadata.py
-    └── sync_queries_catalog.py
+    └── annotate_schema_metadata.py
 ```
 
 
