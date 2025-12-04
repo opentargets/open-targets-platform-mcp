@@ -15,6 +15,7 @@ class Config:
         self.http_host: str = os.getenv("MCP_HTTP_HOST", "127.0.0.1")
         self.http_port: int = int(os.getenv("MCP_HTTP_PORT", "8000"))
         self.timeout: int = int(os.getenv("OPENTARGETS_TIMEOUT", "30"))
+        self.jq_enabled: bool = os.getenv("OPENTARGETS_JQ_ENABLED", "false").lower() == "true"
 
     @property
     def mcp_url(self) -> str:

@@ -1,6 +1,5 @@
-"""Tool for executing entity search queries using SearchAnnotation."""
+"""Tool for executing entity search queries."""
 
-from pathlib import Path
 from typing import Annotated
 
 from pydantic import Field
@@ -9,19 +8,19 @@ from otar_mcp.client import execute_graphql_query
 from otar_mcp.config import config
 from otar_mcp.mcp_instance import mcp
 
-
-def _get_search_annotation_query() -> str:
-    """Load the SearchAnnotation.gql file."""
-    current_file = Path(__file__)
-    project_root = current_file.parent.parent.parent.parent
-    query_file = project_root / "extracted_queries" / "search" / "SearchAnnotation.gql"
-
-    if not query_file.exists():
-        msg = f"SearchAnnotation.gql not found at {query_file}"
-        raise FileNotFoundError(msg)
-
-    with open(query_file, encoding="utf-8") as f:
-        return f.read()
+# GraphQL query for entity search - baked in directly
+SEARCH_ENTITY_QUERY = """
+query searchEntity($queryString: String!) {
+  search(queryString: $queryString) {
+    total
+    hits {
+      id
+      entity
+      description
+    }
+  }
+}
+"""
 
 
 @mcp.tool(name="search_entity")
@@ -60,12 +59,6 @@ def search_entity(
             ]
         }
     """
-    try:
-        # Load the query once
-        query = _get_search_annotation_query()
-    except FileNotFoundError as e:
-        return {"error": str(e)}
-
     # Hardcoded jq filter to return only id and entity from first 3 results
     jq_filter = ".data.search.hits[:3] | map({id, entity})"
 
@@ -79,7 +72,7 @@ def search_entity(
         try:
             result = execute_graphql_query(
                 config.api_endpoint,
-                query,
+                SEARCH_ENTITY_QUERY,
                 variables,
                 jq_filter=jq_filter,
             )

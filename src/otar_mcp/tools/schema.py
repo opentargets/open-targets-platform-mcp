@@ -1,21 +1,25 @@
 """Tool for fetching the OpenTargets GraphQL schema."""
 
-from graphql import print_schema
+from pathlib import Path
 
-from otar_mcp.client import fetch_graphql_schema
-from otar_mcp.config import config
 from otar_mcp.mcp_instance import mcp
 
 
-@mcp.tool(name="get_open_targets_graphql_schema")
+@mcp.tool()
 def get_open_targets_graphql_schema() -> dict:
     """Retrieve the Open Targets GraphQL schema for query construction.
 
     Returns:
         dict: Schema string in format {'schema': '...'} containing GraphQL type definitions or error message.
     """
+    # Dynamic path relative to this file
+    # This file is in src/otar_mcp/tools/schema.py
+    # We want src/otar_mcp/data/documented_schema.txt
+    schema_path = Path(__file__).parent.parent / "data" / "documented_schema.txt"
+
     try:
-        schema = fetch_graphql_schema(config.api_endpoint)
-        return {"schema": print_schema(schema)}
+        schema = schema_path.read_text(encoding="utf-8")
     except Exception as e:
-        return {"error": f"Failed to fetch Open Targets GraphQL schema: {e!s}"}
+        return {"error": f"Failed to load Open Targets GraphQL schema: {e!s}"}
+    else:
+        return {"schema": schema}
