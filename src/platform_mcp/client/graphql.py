@@ -1,43 +1,16 @@
-from typing import Any, Optional
+from typing import Any
 
 import jq
 from gql import Client, gql
 from gql.transport.requests import RequestsHTTPTransport
-from graphql import GraphQLSchema
-
-
-def fetch_graphql_schema(endpoint_url: str) -> GraphQLSchema:
-    """Fetch the GraphQL schema from the given endpoint URL.
-
-    Args:
-        endpoint_url (str): The GraphQL endpoint URL.
-
-    Returns:
-        GraphQLSchema: The fetched GraphQL schema.
-    """
-    # Create a transport with your GraphQL endpoint
-    transport = RequestsHTTPTransport(
-        url=endpoint_url,
-    )
-
-    # Create a client
-    client = Client(transport=transport, fetch_schema_from_transport=True)
-
-    with client as _session:
-        # The schema is automatically fetched and stored in the client
-        if not client.schema:
-            msg = "Failed to fetch schema from the GraphQL endpoint."
-            raise ValueError(msg)
-
-        return client.schema
 
 
 def execute_graphql_query(
     endpoint_url: str,
     query_string: str,
-    variables: Optional[dict[str, Any]] = None,
-    headers: Optional[dict[str, str]] = None,
-    jq_filter: Optional[str] = None,
+    variables: dict[str, Any] | None = None,
+    headers: dict[str, str] | None = None,
+    jq_filter: str | None = None,
 ) -> dict[str, Any]:
     """Make a generic GraphQL API call.
 
@@ -92,11 +65,9 @@ def execute_graphql_query(
                     single_result = filtered_results[0]
                     if isinstance(single_result, dict):
                         return single_result
-                    else:
-                        return {"result": single_result}
-                else:
-                    # Multiple results: return as array
-                    return {"results": filtered_results}
+                    return {"result": single_result}
+                # Multiple results: return as array
+                return {"results": filtered_results}
             except Exception as jq_error:
                 return {
                     "status": "success",
