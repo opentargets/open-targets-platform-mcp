@@ -1,39 +1,59 @@
 """Command-line interface for OpenTargets MCP server."""
 
 import asyncio
+from importlib import metadata
+from typing import Annotated
 
-import click
+import typer
 
 from platform_mcp.config import config
 
+app = typer.Typer()
 
-@click.group()
-@click.version_option()
-def cli() -> None:
+
+def _version_callback(value: bool) -> bool:
+    """Display the installed package version and exit when requested."""
+    if value:
+        package_version = metadata.version("platform-mcp")
+        typer.echo(f"otpmcp {package_version}")
+        raise typer.Exit
+    return value
+
+
+@app.callback()
+def root(
+    version: Annotated[
+        bool | None,
+        typer.Option(
+            "--version",
+            callback=_version_callback,
+            is_eager=True,
+            help="Show the package version and exit.",
+        ),
+    ],
+) -> None:
     """OpenTargets MCP - Model Context Protocol server for OpenTargets Platform API."""
-    pass
 
 
-@cli.command(name="serve-http")
-@click.option(
-    "--host",
-    default=config.http_host,
-    help="Host to bind the HTTP server to",
-    show_default=True,
-)
-@click.option(
-    "--port",
-    default=config.http_port,
-    help="Port to bind the HTTP server to",
-    show_default=True,
-)
-@click.option(
-    "--jq/--no-jq",
-    default=False,
-    help="Enable jq filtering support for query tools",
-    show_default=True,
-)
-def serve_http(host: str, port: int, jq: bool) -> None:
+@app.command(name="serve-http")
+def serve_http(
+    host: str = typer.Option(
+        config.http_host,
+        help="Host to bind the HTTP server to",
+        show_default=True,
+    ),
+    port: int = typer.Option(
+        config.http_port,
+        help="Port to bind the HTTP server to",
+        show_default=True,
+    ),
+    jq: bool = typer.Option(
+        False,
+        "--jq/--no-jq",
+        help="Enable jq filtering support for query tools",
+        show_default=True,
+    ),
+) -> None:
     """Start the MCP server with HTTP transport.
 
     This mode is useful for testing and development, or when you need to
@@ -48,18 +68,19 @@ def serve_http(host: str, port: int, jq: bool) -> None:
     mcp = setup_server()
 
     jq_status = "enabled" if jq else "disabled"
-    click.echo(f"Starting OpenTargets MCP server on http://{host}:{port}/mcp (jq filtering: {jq_status})")
+    typer.echo(f"Starting OpenTargets MCP server on http://{host}:{port}/mcp (jq filtering: {jq_status})")
     mcp.run(transport="http", host=host, port=port)
 
 
-@cli.command(name="serve-stdio")
-@click.option(
-    "--jq/--no-jq",
-    default=False,
-    help="Enable jq filtering support for query tools",
-    show_default=True,
-)
-def serve_stdio(jq: bool) -> None:
+@app.command(name="serve-stdio")
+def serve_stdio(
+    jq: bool = typer.Option(
+        False,
+        "--jq/--no-jq",
+        help="Enable jq filtering support for query tools",
+        show_default=True,
+    ),
+) -> None:
     """Start the MCP server with stdio transport.
 
     This is the standard transport for MCP servers and is used by
@@ -74,18 +95,22 @@ def serve_stdio(jq: bool) -> None:
     mcp = setup_server()
 
     jq_status = "enabled" if jq else "disabled"
-    click.echo(f"Starting OpenTargets MCP server with stdio transport (jq filtering: {jq_status})", err=True)
+    typer.echo(
+        f"Starting OpenTargets MCP server with stdio transport (jq filtering: {jq_status})",
+        err=True,
+    )
     mcp.run(transport="stdio")
 
 
-@cli.command(name="list-tools")
-@click.option(
-    "--jq/--no-jq",
-    default=False,
-    help="Show tools as they would appear with/without jq support",
-    show_default=True,
-)
-def list_tools(jq: bool) -> None:
+@app.command(name="list-tools")
+def list_tools(
+    jq: bool = typer.Option(
+        False,
+        "--jq/--no-jq",
+        help="Show tools as they would appear with/without jq support",
+        show_default=True,
+    ),
+) -> None:
     """List all available MCP tools."""
     # Set jq configuration to show appropriate tool signatures
     config.jq_enabled = jq
@@ -95,7 +120,7 @@ def list_tools(jq: bool) -> None:
     mcp = setup_server()
 
     jq_status = "with jq support" if jq else "without jq support"
-    click.echo(f"Available tools ({jq_status}):")
+    typer.echo(f"Available tools ({jq_status}):")
 
     # Dynamically list all registered tools using public API
     tools = asyncio.run(mcp.get_tools())
@@ -103,12 +128,12 @@ def list_tools(jq: bool) -> None:
         # Extract first line of description from the tool's description field
         description = tool.description or "No description available"
         first_line = description.split("\n")[0].strip()
-        click.echo(f"  - {name}: {first_line}")
+        typer.echo(f"  - {name}: {first_line}")
 
 
 def main() -> None:
     """Main entry point for the CLI."""
-    cli()
+    app()
 
 
 if __name__ == "__main__":
