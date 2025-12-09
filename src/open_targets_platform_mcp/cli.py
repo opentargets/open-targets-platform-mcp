@@ -81,8 +81,8 @@ def root(
     jq_enabled: Annotated[
         bool | None,
         typer.Option(
-            "--jq/--no-jq",
-            help="Enable/Disable jq filtering support for query tools",
+            "--jq",
+            help="Enable jq filtering support for query tools",
             show_default=True,
         ),
     ] = settings.jq_enabled,

@@ -17,7 +17,7 @@ class TestSettings:
         assert settings.http_host == "localhost"
         assert settings.http_port == 8000
         assert settings.api_call_timeout == 30
-        assert settings.jq_enabled is True
+        assert settings.jq_enabled is False
 
     def test_settings_custom_env_values(self, custom_env):
         """Test that Settings reads from environment variables."""

@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     transport: TransportType = TransportType.HTTP
     http_host: str = "localhost"
     http_port: int = 8000
-    jq_enabled: bool = True
+    jq_enabled: bool = False
 
     def update(self, **kwargs: Any) -> None:
         for k, v in kwargs.items():

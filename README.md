@@ -187,7 +187,7 @@ Configure the server using environment variables (all prefixed with `OTP_MCP_`).
 | `OTP_MCP_HTTP_HOST` | `--host` | HTTP server host (only used with `http` transport) | `localhost` |
 | `OTP_MCP_HTTP_PORT` | `--port` | HTTP server port (only used with `http` transport) | `8000` |
 | `OTP_MCP_API_CALL_TIMEOUT` | `--timeout` | Request timeout in seconds for API calls | `30` |
-| `OTP_MCP_JQ_ENABLED` | `--jq` / `--no-jq` | Enable/disable jq filtering support | `true` |
+| `OTP_MCP_JQ_ENABLED` | `--jq` | Enable jq filtering support | `false` |
 
 **Examples:**
 
@@ -207,11 +207,11 @@ open-targets-platform-mcp --transport stdio --no-jq
 
 ### JQ Filtering (Optional)
 
-The MCP server supports optional server-side JSON filtering using jq expressions. This feature is **enabled by default** but can be disabled if you prefer simpler tool interfaces.
+The MCP server supports optional server-side JSON filtering using jq expressions. This feature is **disabled by default** but can be enabled if you want to reduce token consumption.
 
 #### When to Use JQ Filtering
 
-JQ filtering is enabled by default and is recommended when:
+JQ filtering is disabled by default. Enable it when:
 - You want to reduce token consumption by extracting only specific fields from API responses
 - Working with large API responses where only a subset of data is needed
 - The calling LLM is proficient at tool calling and can reliably construct jq filters
@@ -231,7 +231,7 @@ open-targets-platform-mcp --transport http --jq
 
 **Via environment variable:**
 ```bash
-export OTP_MCP_JQ_ENABLED=false  # Disable jq (it's enabled by default)
+export OTP_MCP_JQ_ENABLED=true  # Enable jq (it's disabled by default)
 open-targets-platform-mcp --transport stdio
 ```
 
