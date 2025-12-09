@@ -2,7 +2,7 @@ from typing import Any, cast
 
 import jq
 from gql import Client, gql
-from gql.transport.requests import RequestsHTTPTransport
+from gql.transport.aiohttp import AIOHTTPTransport
 
 from open_targets_platform_mcp.model.result import QueryResult
 from open_targets_platform_mcp.settings import settings
@@ -28,12 +28,11 @@ async def execute_graphql_query(
     query = gql(query_string)
     compiled_filter = None if jq_filter is None else cast("Any", jq.compile(jq_filter))  # pyright: ignore[reportUnknownMemberType]
 
-    transport = RequestsHTTPTransport(
+    transport = AIOHTTPTransport(
         url=str(settings.api_endpoint),
         headers={
             "Content-Type": "application/json",
         },
-        use_json=True,
     )
     client = Client(transport=transport)
     result = await client.execute_async(query, variable_values=variables)
