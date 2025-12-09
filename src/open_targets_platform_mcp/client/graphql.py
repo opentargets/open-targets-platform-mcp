@@ -1,80 +1,52 @@
-from typing import Any
+from typing import Any, cast
 
 import jq
 from gql import Client, gql
 from gql.transport.requests import RequestsHTTPTransport
 
+from open_targets_platform_mcp.model.result import QueryResult
+from open_targets_platform_mcp.settings import settings
 
-def execute_graphql_query(
-    endpoint_url: str,
+
+async def execute_graphql_query(
     query_string: str,
     variables: dict[str, Any] | None = None,
-    headers: dict[str, str] | None = None,
     jq_filter: str | None = None,
-) -> dict[str, Any]:
-    """Make a generic GraphQL API call.
+) -> QueryResult:
+    """Make a generic GraphQL API call and apply a jq filter to the result.
 
     Args:
-        endpoint_url (str): The GraphQL endpoint URL
         query_string (str): The GraphQL query or mutation as a string
         variables (dict, optional): Variables for the GraphQL query
-        headers (dict, optional): HTTP headers to include
         jq_filter (str, optional): jq filter to apply to the result
 
     Returns:
-        dict: The response data from the GraphQL API
+        QueryResult: The result of the GraphQL query
     """
-    # Set default headers if none provided
-    if headers is None:
-        headers = {
-            "Content-Type": "application/json",
-        }
+    # Compile both the query and the jq filter before submitting a HTTP request
+    # to detect errors early.
+    query = gql(query_string)
+    compiled_filter = None if jq_filter is None else cast("Any", jq.compile(jq_filter))  # pyright: ignore[reportUnknownMemberType]
 
-    # Prepare the transport
     transport = RequestsHTTPTransport(
-        url=endpoint_url,
-        headers=headers,
+        url=str(settings.api_endpoint),
+        headers={
+            "Content-Type": "application/json",
+        },
         use_json=True,
     )
-
-    # Create a client
     client = Client(transport=transport)
+    result = await client.execute_async(query, variable_values=variables)
 
-    # Parse the query string
-    try:
-        query = gql(query_string)
-    except Exception as e:
-        return {"status": "error", "message": f"Failed to parse query: {e!s}"}
-
-    try:
-        result = client.execute(query, variable_values=variables)
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-    else:
-        response = {"status": "success", "data": result}
-
-        # Apply jq filter if provided
-        if jq_filter:
-            try:
-                compiled_filter = jq.compile(jq_filter)
-                filtered_results = compiled_filter.input_value(response).all()
-
-                # Handle different result types
-                if len(filtered_results) == 1:
-                    # Single result: return as-is if dict, wrap if not
-                    single_result = filtered_results[0]
-                    if isinstance(single_result, dict):
-                        return single_result
-                    return {"result": single_result}
-                # Multiple results: return as array
-                return {"results": filtered_results}
-            except Exception as jq_error:
-                return {
-                    "status": "success",
-                    "data": response["data"],
-                    "warning": f"jq filter failed: {jq_error!s}. "
-                    "Tip: Use '// empty' or '// []' to handle null values. "
-                    f"Example: '{jq_filter} // empty'",
-                }
-
-        return response
+    if compiled_filter:
+        try:
+            filtered_results = cast("list[Any]", compiled_filter.input_value(result).all())
+            return QueryResult.create_success(filtered_results)
+        except Exception as jq_error:
+            return QueryResult.create_warning(
+                result,
+                f"jq filter failed: {jq_error!s}. "
+                "Tip: Use '// empty' or '// []' to handle null values. "
+                f"Example: '{jq_filter} // empty'",
+            )
+    return QueryResult.create_success(result)
