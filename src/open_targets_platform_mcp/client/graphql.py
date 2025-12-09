@@ -33,6 +33,7 @@ async def execute_graphql_query(
         headers={
             "Content-Type": "application/json",
         },
+        timeout=settings.api_call_timeout,
     )
     client = Client(transport=transport)
     result = await client.execute_async(query, variable_values=variables)
