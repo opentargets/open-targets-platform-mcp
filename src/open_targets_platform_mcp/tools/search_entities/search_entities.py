@@ -8,7 +8,7 @@ from open_targets_platform_mcp.model.result import BatchQueryResult, QueryResult
 from open_targets_platform_mcp.tools.batch_query.batch_query import batch_query_with_jq
 
 VARIABLE_FIELD = "queryString"
-JQ_FILTER = ".data.search.hits[:3] | map({id, entity})"
+JQ_FILTER = ".search.hits[:3] | map({id, entity})"
 SEARCH_ENTITY_QUERY = """
 query searchEntity($queryString: String!) {
   search(queryString: $queryString) {
