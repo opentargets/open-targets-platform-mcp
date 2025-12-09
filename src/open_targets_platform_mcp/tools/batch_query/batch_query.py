@@ -1,7 +1,6 @@
 """Batch query execution tool for Open Targets GraphQL API."""
 
 import asyncio
-from dataclasses import replace
 from typing import Annotated, Any
 
 from pydantic import Field
@@ -35,7 +34,7 @@ async def _handle_single_query(
         key = str(variables[key_field])
         result = await execute_graphql_query(query_string, variables, jq_filter=jq_filter)
         if result.status in (QueryResultStatus.ERROR, QueryResultStatus.WARNING):
-            result = replace(result, variables=variables)
+            result = result.model_copy(update={"variables": variables})
 
     return BatchQuerySingleResult(index=index, key=key, result=result)
 
