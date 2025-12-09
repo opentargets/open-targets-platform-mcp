@@ -1,10 +1,10 @@
 """Tests for GraphQL client module."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from open_targets_platform_mcp.client.graphql import execute_graphql_query
+from open_targets_platform_mcp.client.graphql import execute_graphql_query, fetch_graphql_schema
 from open_targets_platform_mcp.model.result import QueryResultStatus
 
 # ============================================================================
@@ -296,3 +296,52 @@ class TestGraphQLIntegration:
 
         with pytest.raises(TransportQueryError):
             await execute_graphql_query(invalid_query)
+
+
+# ============================================================================
+# fetch_graphql_schema Tests
+# ============================================================================
+
+
+class TestFetchGraphQLSchema:
+    """Tests for fetch_graphql_schema function."""
+
+    @pytest.mark.asyncio
+    async def test_fetch_graphql_schema_success(self):
+        """Test successful schema fetching."""
+        mock_schema_sdl = "type Query { target(ensemblId: String!): Target }"
+        mock_client_instance = AsyncMock()
+        mock_client_instance.schema = Mock()
+        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("open_targets_platform_mcp.client.graphql.AIOHTTPTransport"):
+            with patch(
+                "open_targets_platform_mcp.client.graphql.Client",
+                return_value=mock_client_instance,
+            ) as mock_client:
+                with patch(
+                    "open_targets_platform_mcp.client.graphql.print_schema",
+                    return_value=mock_schema_sdl,
+                ):
+                    result = await fetch_graphql_schema()
+
+        assert result == mock_schema_sdl
+        assert mock_client.call_args[1]["fetch_schema_from_transport"] is True
+        mock_client_instance.__aenter__.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_fetch_graphql_schema_no_schema(self):
+        """Test that ValueError is raised when schema is not fetched."""
+        mock_client_instance = AsyncMock()
+        mock_client_instance.schema = None
+        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("open_targets_platform_mcp.client.graphql.AIOHTTPTransport"):
+            with patch(
+                "open_targets_platform_mcp.client.graphql.Client",
+                return_value=mock_client_instance,
+            ):
+                with pytest.raises(ValueError, match="Failed to fetch schema"):
+                    await fetch_graphql_schema()

@@ -3,6 +3,7 @@ from typing import Any, cast
 import jq
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
+from graphql import GraphQLSchema
 
 from open_targets_platform_mcp.model.result import QueryResult
 from open_targets_platform_mcp.settings import settings
@@ -50,3 +51,37 @@ async def execute_graphql_query(
                 f"Example: '{jq_filter} // empty'",
             )
     return QueryResult.create_success(result)
+
+
+async def fetch_graphql_schema() -> GraphQLSchema:
+    """Fetch the GraphQL schema from the configured endpoint URL.
+
+    Uses the gql client's built-in schema fetching capability to retrieve
+    the schema automatically via introspection.
+
+    Returns:
+        str: The GraphQL schema in SDL (Schema Definition Language) format.
+
+    Raises:
+        ValueError: If the schema could not be fetched from the endpoint.
+    """
+    # Create a transport with the GraphQL endpoint
+    transport = AIOHTTPTransport(
+        url=str(settings.api_endpoint),
+        headers={
+            "Content-Type": "application/json",
+        },
+        timeout=settings.api_call_timeout,
+    )
+
+    # Create a client with schema fetching enabled
+    client = Client(transport=transport, fetch_schema_from_transport=True)
+
+    async with client:
+        # The schema is automatically fetched and stored in the client
+        if not client.schema:
+            error_msg = "Failed to fetch schema from the GraphQL endpoint."
+            raise ValueError(error_msg)
+
+        # Convert schema to SDL format
+        return client.schema
