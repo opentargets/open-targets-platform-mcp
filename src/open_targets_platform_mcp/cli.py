@@ -3,7 +3,6 @@ from importlib import metadata
 from typing import Annotated
 
 import typer
-from pydantic import HttpUrl
 
 from open_targets_platform_mcp.create_server import create_server
 from open_targets_platform_mcp.settings import TransportType, settings
@@ -63,49 +62,49 @@ def root(
             show_default=True,
         ),
     ] = settings.transport,
-    host: Annotated[
+    http_host: Annotated[
         str | None,
         typer.Option(
+            "--host",
             help="Host to bind the HTTP server to",
             show_default=True,
         ),
     ] = settings.http_host,
-    port: Annotated[
+    http_port: Annotated[
         int | None,
         typer.Option(
+            "--port",
             help="Port to bind the HTTP server to",
             show_default=True,
         ),
     ] = settings.http_port,
-    jq: Annotated[
+    jq_enabled: Annotated[
         bool | None,
         typer.Option(
+            "--jq/--no-jq",
             help="Enable/Disable jq filtering support for query tools",
             show_default=True,
         ),
     ] = settings.jq_enabled,
-    api: Annotated[
+    api_endpoint: Annotated[
         str | None,
         typer.Option(
+            "--api",
             help="Open Targets Platform API endpoint to use",
             show_default=True,
         ),
     ] = str(settings.api_endpoint),
-    timeout: Annotated[
+    api_call_timeout: Annotated[
         int | None,
         typer.Option(
+            "--timeout",
             help="Request timeout (in seconds) for calls to the Open Targets Platform API.",
             show_default=True,
         ),
     ] = settings.api_call_timeout,
 ) -> None:
     """Entry point of CLI."""
-    settings.transport = settings.transport if transport is None else transport
-    settings.http_host = settings.http_host if host is None else host
-    settings.http_port = settings.http_port if port is None else port
-    settings.jq_enabled = settings.jq_enabled if jq is None else jq
-    settings.api_endpoint = settings.api_endpoint if api is None else HttpUrl(api)
-    settings.api_call_timeout = settings.api_call_timeout if timeout is None else timeout
+    settings.update(**locals())
 
     mcp = create_server()
 
