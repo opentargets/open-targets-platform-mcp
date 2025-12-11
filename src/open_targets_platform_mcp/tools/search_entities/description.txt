@@ -1,0 +1,26 @@
+Search for entities across multiple types using the Open Targets search API.
+
+    This tool performs a streamlined entity search that returns the id and entity type
+    for up to 3 matching entities across targets, diseases, drugs, variants, and studies.
+
+    Supports multiple query strings in a single call - each query is executed independently
+    and results are returned in a dictionary keyed by the query string.
+
+    Args:
+        query_strings: List of search queries (e.g., ["BRCA1", "breast cancer", "aspirin"])
+
+    Returns:
+        dict: Dictionary mapping each query string to its results (array of up to 3 entities
+              with id and entity fields), or error message if any query fails.
+
+    Example:
+        Input: ["BRCA1", "aspirin"]
+        Output: {
+            "BRCA1": [
+                {"id": "ENSG00000012048", "entity": "target"},
+                {"id": "EFO_0000305", "entity": "disease"}
+            ],
+            "aspirin": [
+                {"id": "CHEMBL25", "entity": "drug"}
+            ]
+        }
