@@ -4,7 +4,7 @@ import base64
 from importlib import resources
 
 from fastmcp import FastMCP
-from fastmcp.server.middleware.error_handling import ErrorHandlingMiddleware
+from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
 from mcp.types import Icon
 
 from open_targets_platform_mcp.settings import settings
@@ -31,9 +31,10 @@ def create_server() -> FastMCP:
     mcp = FastMCP(
         name=settings.server_name,
         icons=[Icon(src=data_uri, mimeType="image/png")],
+        mask_error_details=True,
     )
 
-    mcp.add_middleware(ErrorHandlingMiddleware())
+    mcp.add_middleware(RateLimitingMiddleware(max_requests_per_second=3))
 
     mcp.tool(get_open_targets_graphql_schema)
     mcp.tool(
