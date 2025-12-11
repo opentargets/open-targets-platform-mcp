@@ -41,5 +41,5 @@ ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
 
 # Set default command to serve HTTP server
-CMD ["otar-mcp", "serve-http", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["otp-mcp"]
 
