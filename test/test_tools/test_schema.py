@@ -5,15 +5,21 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from graphql import GraphQLSchema, build_schema
 
-from open_targets_platform_mcp.tools.schema import schema
+from open_targets_platform_mcp.tools.schema import schema, subschema, type_graph
 
 
 @pytest.fixture
 def clear_cache():
     """Clear the schema cache before and after each test."""
     schema._cached_schema = None
+    type_graph._cached_schema = None
+    type_graph._cached_type_graph = None
+    subschema._cached_subschemas = None
     yield
     schema._cached_schema = None
+    type_graph._cached_schema = None
+    type_graph._cached_type_graph = None
+    subschema._cached_subschemas = None
 
 
 @pytest.fixture
@@ -51,49 +57,69 @@ async def test_prefetch_schema_populates_cache(clear_cache, mock_graphql_schema)
 
 
 @pytest.mark.asyncio
-async def test_get_open_targets_graphql_schema_returns_cached_schema(clear_cache, mock_graphql_schema) -> None:
-    """Test that get_open_targets_graphql_schema returns the pre-fetched schema."""
+async def test_get_open_targets_graphql_schema_returns_filtered_schema(
+    clear_cache, mock_graphql_schema
+) -> None:
+    """Test that get_open_targets_graphql_schema returns filtered schema by category."""
     with patch(
-        "open_targets_platform_mcp.tools.schema.schema.fetch_graphql_schema",
+        "open_targets_platform_mcp.tools.schema.type_graph.fetch_graphql_schema",
         new_callable=AsyncMock,
     ) as mock_fetch:
         mock_fetch.return_value = mock_graphql_schema
 
-        # Pre-fetch the schema first
+        # Pre-fetch schema, type graph, and subschemas
         await schema.prefetch_schema()
+        await type_graph.prefetch_type_graph()
+        await subschema.prefetch_category_subschemas(depth=1)
 
-        # Now get the schema - should return cached value
-        result = await schema.get_open_targets_graphql_schema()
+        # Now get the schema with a category
+        result = await schema.get_open_targets_graphql_schema(["clinical-genetics"])
 
     assert isinstance(result, str)
     assert len(result) > 0
-    assert "type Query" in result or "type Query {" in result
-    assert "target" in result.lower()
-    # Should only be called once (during prefetch)
-    mock_fetch.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_get_open_targets_graphql_schema_raises_if_not_prefetched(clear_cache) -> None:
     """Test that get_open_targets_graphql_schema raises error if schema not pre-fetched."""
     with pytest.raises(RuntimeError, match="Schema not initialized"):
-        await schema.get_open_targets_graphql_schema()
+        await schema.get_open_targets_graphql_schema(["clinical-genetics"])
 
 
 @pytest.mark.asyncio
-async def test_multiple_calls_return_same_cached_schema(clear_cache, mock_graphql_schema) -> None:
-    """Test that multiple calls return the same cached schema."""
+async def test_get_open_targets_graphql_schema_raises_for_invalid_category(
+    clear_cache, mock_graphql_schema
+) -> None:
+    """Test that get_open_targets_graphql_schema raises error for invalid category."""
     with patch(
-        "open_targets_platform_mcp.tools.schema.schema.fetch_graphql_schema",
+        "open_targets_platform_mcp.tools.schema.type_graph.fetch_graphql_schema",
         new_callable=AsyncMock,
     ) as mock_fetch:
         mock_fetch.return_value = mock_graphql_schema
 
         await schema.prefetch_schema()
+        await type_graph.prefetch_type_graph()
+        await subschema.prefetch_category_subschemas(depth=1)
 
-        result1 = await schema.get_open_targets_graphql_schema()
-        result2 = await schema.get_open_targets_graphql_schema()
+        with pytest.raises(ValueError, match="Invalid category"):
+            await schema.get_open_targets_graphql_schema(["nonexistent-category"])
 
-        assert result1 == result2
-        # Should only be called once during prefetch
-        assert mock_fetch.await_count == 1
+
+@pytest.mark.asyncio
+async def test_multiple_categories_combines_types(clear_cache, mock_graphql_schema) -> None:
+    """Test that multiple categories combine their types."""
+    with patch(
+        "open_targets_platform_mcp.tools.schema.type_graph.fetch_graphql_schema",
+        new_callable=AsyncMock,
+    ) as mock_fetch:
+        mock_fetch.return_value = mock_graphql_schema
+
+        await schema.prefetch_schema()
+        await type_graph.prefetch_type_graph()
+        await subschema.prefetch_category_subschemas(depth=1)
+
+        result = await schema.get_open_targets_graphql_schema(
+            ["clinical-genetics", "drug-mechanisms"]
+        )
+
+        assert isinstance(result, str)

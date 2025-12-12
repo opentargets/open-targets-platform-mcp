@@ -184,6 +184,20 @@ def get_type_graph() -> TypeGraph:
     return _cached_type_graph
 
 
+def get_cached_schema() -> GraphQLSchema:
+    """Get the cached GraphQL schema object.
+
+    Returns:
+        The pre-fetched GraphQL schema.
+
+    Raises:
+        RuntimeError: If schema was not pre-fetched at startup.
+    """
+    if _cached_schema is None:
+        raise RuntimeError(_ERR_SCHEMA_NOT_INIT)
+    return _cached_schema
+
+
 def _get_reachable_types(graph: TypeGraph, start_type: str) -> set[str]:
     """BFS traversal to find all reachable types exhaustively.
 
@@ -207,6 +221,44 @@ def _get_reachable_types(graph: TypeGraph, start_type: str) -> set[str]:
                     next_level.add(referenced_type)
 
         current_level = next_level
+
+    return visited
+
+
+def get_reachable_types_with_depth(
+    graph: TypeGraph,
+    start_types: set[str],
+    max_depth: int | None = None,
+) -> set[str]:
+    """BFS traversal with optional depth limit.
+
+    Args:
+        graph: The type graph to traverse
+        start_types: Set of type names to start from
+        max_depth: Maximum depth to traverse (None = exhaustive)
+
+    Returns:
+        Set of all reachable type names within depth limit
+        (including start types)
+    """
+    visited: set[str] = set(start_types)
+    current_level: set[str] = set(start_types)
+    current_depth = 0
+
+    while current_level:
+        if max_depth is not None and current_depth >= max_depth:
+            break
+
+        next_level: set[str] = set()
+
+        for type_name in current_level:
+            for referenced_type in graph.adjacency.get(type_name, {}):
+                if referenced_type not in visited:
+                    visited.add(referenced_type)
+                    next_level.add(referenced_type)
+
+        current_level = next_level
+        current_depth += 1
 
     return visited
 

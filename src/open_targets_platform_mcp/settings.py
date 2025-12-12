@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     rate_limiting_session_max_requests_per_second: float = 3
     rate_limiting_session_burst_capacity: int = 6
     jq_enabled: bool = False
+    subschema_depth: int | Literal["exhaustive"] = 1
 
     def update(self, **kwargs: Any) -> None:
         for k, v in kwargs.items():
