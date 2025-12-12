@@ -15,9 +15,10 @@ This package is the official Open Targets Platform MCP server implementation tha
 - [Official MCP Server](#official-mcp-server)
 - [Local Deployment](#local-deployment)
 - [Advanced Deployment](#advanced-deployment)
+- [Available Commands](#available-commands)
+- [Server Settings](#server-settings)
 - [Available Tools](#available-tools)
 - [Strategy](#strategy)
-- [jq Filtering](#jq-filtering-optional)
 - [Claude Desktop Setup](#claude-desktop-setup)
 - [Project Structure](#project-structure)
 - [Testing](#testing)
@@ -31,7 +32,7 @@ This package is the official Open Targets Platform MCP server implementation tha
 - ⚡ **Batch Query Processing**: Execute the same query multiple times with different parameters efficiently
 - 🔎 **Entity Search**: Search for entities across multiple types (targets, diseases, drugs, variants, studies)
 - 🛠️ **CLI Tools**: Easy-to-use command-line interface for starting the server
-- 🎯 **jq Filtering** (Optional): Server-side JSON processing using [jq](https://jqlang.org/) to reduce token consumption and improve performance
+- 🎯 **jq Filtering** (Optional): Server-side JSON processing using [jq](https://jqlang.org/) to reduce token consumption and improve performance. See [jq Filtering](#jq-filtering-optional) for details.
 
 ## Official MCP Server
 
@@ -81,7 +82,7 @@ docker run -d \
 ```
 
 ### Server Settings
-For available CLI arguments and environment variables, see the [Server Settings](#environment-variables) table.
+For available CLI arguments and environment variables, see the [Server Settings](#server-settings) table.
 
 ## Advanced Deployment
 
@@ -106,7 +107,7 @@ uv run fastmcp run ./src/open_targets_platform_mcp/server.py
 ```
 
 > **Note**: For all FastMCP CLI options, see the [FastMCP documentation](https://gofastmcp.com/patterns/cli#fastmcp-run).  
-> **Note**: Use environment variables (see [Server Settings](#environment-variables) table) to configure the server when using FastMCP CLI.
+> **Note**: Use environment variables (see [Server Settings](#server-settings) table) to configure the server when using FastMCP CLI.
 
 ### Development Installation (Editable)
 
@@ -128,7 +129,7 @@ The package provides two command variants:
 
 Both commands are functionally identical.
 
-### Server Settings {#environment-variables}
+## Server Settings
 
 Configure the server using environment variables (all prefixed with `OTP_MCP_`). The following table shows all available configuration options:
 
