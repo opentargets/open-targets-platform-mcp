@@ -275,6 +275,10 @@ open-targets-platform-mcp/
 └── pyproject.toml           # Project configuration and dependencies
 ```
 
+## Testing
+
+> **Note**: The test suite is currently AI-generated and will be reviewed and refined in the near future.
+
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request on the [GitHub repository](https://github.com/opentargets/open-targets-platform-mcp).
