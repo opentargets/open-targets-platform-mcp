@@ -56,25 +56,21 @@ Once available, you can configure Claude Desktop to use the hosted service:
 
 ## Local Deployment
 
-### Via uvx (Quick Start)
+### Via uvx (Quick Start like no othe other days)
 
 The fastest way to get started is using `uvx`, which will automatically download and run the package directly from GitHub.
 
-The package provides two command variants:
-- `otp-mcp` - Shorter alias (recommended)
-- `open-targets-platform-mcp` - Full command name
-
-Both commands are functionally identical. Examples:
+ Examples:
 
 ```bash
-# Start stdio server
-uvx --from git+https://github.com/opentargets/open-targets-platform-mcp@dev-refactoring otp-mcp --transport stdio
+# Start HTTP server bound to localhost:8000 (default)
+uvx --from git+https://github.com/opentargets/open-targets-platform-mcp otp-mcp
 
 # With jq filtering enabled
-uvx --from git+https://github.com/opentargets/open-targets-platform-mcp@dev-refactoring otp-mcp --transport stdio --jq
+uvx --from git+https://github.com/opentargets/open-targets-platform-mcp@dev-refactoring otp-mcp --jq
 
-# Start HTTP server
-uvx --from git+https://github.com/opentargets/open-targets-platform-mcp@dev-refactoring otp-mcp --transport http --host 127.0.0.1 --port 8000
+# Start stdio server
+uvx --from git+https://github.com/opentargets/open-targets-platform-mcp@dev-refactoring otp-mcp --transport stdio
 ```
 
 ### Docker Deployment
@@ -83,20 +79,15 @@ You can run the MCP server using the official Docker image:
 
 ```bash
 # Pull the latest image
-docker pull ghcr.io/opentargets/platform-mcp:build-pipeline
+docker pull ghcr.io/opentargets/open-targets-platform-mcp
 
-# Run with stdio transport (for Claude Desktop)
-docker run -it --rm \
-  -e OTP_MCP_TRANSPORT=stdio \
-  -e OTP_MCP_JQ_ENABLED=false \
-  ghcr.io/opentargets/platform-mcp:build-pipeline
+# Run as a daemon with HTTP transport
+docker run -d -p 8000:8000 -e OTP_MCP_HTTP_HOST=0.0.0.0 ghcr.io/opentargets/open-targets-platform-mcp
 
-# Run with HTTP transport
-docker run -it --rm \
+# Run as a daemon with JQ enabled
+docker run -d \
   -p 8000:8000 \
-  -e OTP_MCP_TRANSPORT=http \
   -e OTP_MCP_HTTP_HOST=0.0.0.0 \
-  -e OTP_MCP_HTTP_PORT=8000 \
   -e OTP_MCP_JQ_ENABLED=true \
   ghcr.io/opentargets/platform-mcp:build-pipeline
 ```
@@ -143,7 +134,7 @@ For development or to modify the codebase:
 uv pip install -e .
 
 # Run the server
-otp-mcp --transport stdio
+otp-mcp
 ```
 
 ## Available Tools
@@ -153,7 +144,7 @@ The MCP server provides the following tools:
 1. **get_open_targets_graphql_schema**: Fetch the complete GraphQL schema for the OpenTargets Platform API, including detailed documentation for all types and fields
 2. **query_open_targets_graphql**: Execute GraphQL queries to retrieve data about targets, diseases, drugs, and their associations
 3. **batch_query_open_targets_graphql**: Execute the same GraphQL query multiple times with different variable sets for efficient batch processing
-4. **search_entity**: Search for entities across multiple types (targets, diseases, drugs, variants, studies) and retrieve their standardized IDs
+4. **search_entities**: Search for entities across multiple types (targets, diseases, drugs, variants, studies) and retrieve their standardized IDs
 
 ## Strategy
 
@@ -263,22 +254,12 @@ To enable jq filtering support (see [JQ Filtering](#jq-filtering-optional) secti
 }
 ```
 
-#### Command Line Usage
+#### Commands available
+The package provides two command variants:
+- `otp-mcp` - Shorter alias (recommended)
+- `open-targets-platform-mcp` - Full command name
 
-```bash
-# Start HTTP server (for testing/development)
-uv run otp-mcp --transport http
-uv run otp-mcp --transport http --host 127.0.0.1 --port 8000
-uv run otp-mcp --transport http --jq  # with jq filtering
-
-# Start stdio server
-uv run otp-mcp --transport stdio
-uv run otp-mcp --transport stdio --jq  # with jq filtering
-
-# List available tools
-uv run otp-mcp --list-tools
-uv run otp-mcp --list-tools --jq  # show tools with jq support
-```
+Both commands are functionally identical.
 
 #### Environment Variables {#environment-variables}
 
@@ -287,60 +268,45 @@ Configure the server using environment variables (all prefixed with `OTP_MCP_`).
 | Environment Variable | CLI Option | Description | Default |
 |---------------------|------------|-------------|---------|
 | `OTP_MCP_API_ENDPOINT` | `--api` | OpenTargets API endpoint URL | `https://api.platform.opentargets.org/api/v4/graphql` |
-| `OTP_MCP_SERVER_NAME` | *(no CLI option)* | Server name displayed in MCP | `"Model Context Protocol server for Open Targets Platform"` |
+| `OTP_MCP_SERVER_NAME` | `--name` | Server name displayed in MCP | `"Model Context Protocol server for Open Targets Platform"` |
 | `OTP_MCP_TRANSPORT` | `--transport` | Transport type: `stdio` or `http` | `http` |
 | `OTP_MCP_HTTP_HOST` | `--host` | HTTP server host (only used with `http` transport) | `localhost` |
 | `OTP_MCP_HTTP_PORT` | `--port` | HTTP server port (only used with `http` transport) | `8000` |
 | `OTP_MCP_API_CALL_TIMEOUT` | `--timeout` | Request timeout in seconds for API calls | `30` |
 | `OTP_MCP_JQ_ENABLED` | `--jq` | Enable jq filtering support | `false` |
+| `OTP_MCP_RATE_LIMITING_ENABLED` | `--rate-limiting` | Enable rate limiting | `false` |
 
 **Examples:**
 
 Using environment variables:
 ```bash
 export OTP_MCP_TRANSPORT=stdio
-export OTP_MCP_JQ_ENABLED=false
+export OTP_MCP_JQ_ENABLED=true
 otp-mcp
 ```
 
 Using CLI options:
 ```bash
-otp-mcp --transport stdio --no-jq
+otp-mcp --transport stdio --jq
 ```
 
 **Note:** CLI options take precedence over environment variables when both are provided.
 
-### JQ Filtering (Optional)
+### jq filtering (Optional)
 
-The MCP server supports optional server-side JSON filtering using jq expressions. This feature is **disabled by default** but can be enabled if you want to reduce token consumption.
+The MCP server supports optional server-side JSON processing using jq expressions. This feature is **disabled by default** but can be enabled if you want to reduce token consumption.
 
-#### When to Use JQ Filtering
-
-JQ filtering is disabled by default. Enable it when:
+#### Enable when:
 - You want to reduce token consumption by extracting only specific fields from API responses
 - Working with large API responses where only a subset of data is needed
 - The calling LLM is proficient at tool calling and can reliably construct jq filters
 
-Disable jq filtering when:
+#### Disable when:
 - Simplicity is preferred over optimization
 - Working with straightforward queries that don't benefit from filtering
 - The LLM should receive complete API responses
 
-#### Enabling JQ Filtering
-
-**Via CLI flag:**
-```bash
-otp-mcp --transport stdio --jq
-otp-mcp --transport http --jq
-```
-
-**Via environment variable:**
-```bash
-export OTP_MCP_JQ_ENABLED=true  # Enable jq (it's disabled by default)
-otp-mcp --transport stdio
-```
-
-#### How JQ Filtering Works
+#### How jq filtering Works
 
 When jq filtering is enabled, the query tools expose a `jq_filter` parameter. The jq filter is applied server-side before the response is returned, extracting only the relevant data and discarding unnecessary fields.
 
@@ -350,30 +316,6 @@ jq_filter: ".data.target | {id, symbol: .approvedSymbol}"
 ```
 
 This significantly reduces token consumption by returning only the requested fields instead of the full API response.
-
-## Development
-
-### Setup development environment
-
-```bash
-# Install the package with development dependencies
-uv sync --dev
-
-# Install pre-commit hooks (if configured)
-uv run pre-commit install
-```
-
-### Run tests
-
-```bash
-uv run pytest
-```
-
-### Run linting
-
-```bash
-uv run pre-commit run -a
-```
 
 ### Project Structure
 
@@ -430,11 +372,3 @@ Contributions are welcome! Please open an issue or submit a pull request on the 
 ## License
 
 This project is licensed under the terms of the license specified in [LICENSE](LICENSE).
-
-## Acknowledgements
-
-We would like to thank the developers from [@biocontext-ai](https://github.com/biocontext-ai) whose implementation of a GraphQL-based MCP server served as an inspiration for this project.
-
----
-
-Repository initiated with [fpgmaas/cookiecutter-uv](https://github.com/fpgmaas/cookiecutter-uv).
