@@ -123,7 +123,7 @@ def root(
     """Entry point of CLI."""
     settings.update(**locals())
 
-    # Pre-fetch the GraphQL schema and build type graph before starting the server
+    # Pre-fetch the GraphQL schema and type graph before starting server
     asyncio.run(prefetch_schema())
     asyncio.run(prefetch_type_graph())
 

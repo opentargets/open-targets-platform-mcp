@@ -221,52 +221,91 @@ def _build_type_not_found_message(type_name: str, available_types: list[str]) ->
     return f"Type '{type_name}' not found in schema.{suggestion}"
 
 
+def _types_to_sdl(type_names: set[str], schema: GraphQLSchema) -> str:
+    """Convert a set of type names to SDL string."""
+    sdl_parts: list[str] = []
+    for type_name in sorted(type_names):
+        graphql_type = schema.type_map.get(type_name)
+        if graphql_type:
+            sdl_parts.append(print_type(graphql_type))
+    return "\n\n".join(sdl_parts)
+
+
 async def get_type_dependencies(
-    type_name: Annotated[
-        str,
+    type_names: Annotated[
+        list[str],
         Field(
-            description="The GraphQL type name to explore "
-            "(e.g., 'Target', 'Disease', 'Drug')",
+            description="List of GraphQL type names to explore "
+            "(e.g., ['Target', 'Disease', 'Drug'])",
         ),
     ],
-) -> str:
-    """Get the schema subset for a type and all its recursive dependencies.
+) -> dict[str, str]:
+    """Get schema subsets for types, separated by specific and shared deps.
 
-    Given a type name, returns the SDL (Schema Definition Language) for
-    that type and all types it recursively references. This includes full
-    type definitions with descriptions, field definitions, and annotations.
+    Given a list of type names, returns SDL (Schema Definition Language)
+    organized into type-specific dependencies and shared dependencies.
+
+    Returns a dict with:
+        - One key per input type: SDL for types ONLY reachable from that type
+        - "shared" key: SDL for types reachable from multiple input types
 
     Examples:
-        - get_type_dependencies("Target") - Schema for Target and deps
-        - get_type_dependencies("Disease") - Schema for Disease and deps
+        - get_type_dependencies(["Target"]) - All deps under "Target" key
+        - get_type_dependencies(["Target", "Drug"]) - Separated + shared
 
     Args:
-        type_name: The GraphQL type name to start exploration from
+        type_names: List of GraphQL type names to start exploration from
 
     Returns:
-        str: SDL schema subset containing the type and all its dependencies
+        dict with type-specific SDL and shared SDL
 
     Raises:
-        ValueError: If type_name is not found in the schema
+        ValueError: If any type_name is not found in the schema
     """
     graph = get_type_graph()
+    available_types = sorted(graph.types.keys())
 
-    if type_name not in graph.types:
-        available_types = sorted(graph.types.keys())
-        msg = _build_type_not_found_message(type_name, available_types)
+    # Validate all type names first
+    invalid_types = [t for t in type_names if t not in graph.types]
+    if invalid_types:
+        msg = _build_type_not_found_message(invalid_types[0], available_types)
         raise ValueError(msg)
 
     if _cached_schema is None:
         raise RuntimeError(_ERR_SCHEMA_NOT_INIT)
 
-    # Get all reachable types
-    reachable_types = _get_reachable_types(graph, type_name)
+    # Get reachable types for each input type
+    reachable_by_type: dict[str, set[str]] = {}
+    for type_name in type_names:
+        reachable_by_type[type_name] = _get_reachable_types(graph, type_name)
 
-    # Build SDL for each reachable type
-    sdl_parts: list[str] = []
-    for reachable_type_name in sorted(reachable_types):
-        graphql_type = _cached_schema.type_map.get(reachable_type_name)
-        if graphql_type:
-            sdl_parts.append(print_type(graphql_type))
+    # Find shared types (reachable from 2+ input types)
+    all_types: set[str] = set()
+    for types in reachable_by_type.values():
+        all_types.update(types)
 
-    return "\n\n".join(sdl_parts)
+    type_counts: dict[str, int] = {}
+    for types in reachable_by_type.values():
+        for t in types:
+            type_counts[t] = type_counts.get(t, 0) + 1
+
+    shared_types = {t for t, count in type_counts.items() if count > 1}
+
+    # Build result dict
+    result: dict[str, str] = {}
+
+    # Add type-specific dependencies (excluding shared)
+    for type_name in type_names:
+        specific_types = reachable_by_type[type_name] - shared_types
+        if specific_types:
+            result[type_name] = _types_to_sdl(specific_types, _cached_schema)
+        else:
+            result[type_name] = ""
+
+    # Add shared dependencies
+    if shared_types:
+        result["shared"] = _types_to_sdl(shared_types, _cached_schema)
+    else:
+        result["shared"] = ""
+
+    return result

@@ -244,7 +244,7 @@ class TestGetTypeDependencies:
     """Tests for get_type_dependencies MCP tool."""
 
     @pytest.mark.asyncio
-    async def test_returns_sdl_subset(self, clear_cache, mock_graphql_schema):
+    async def test_single_type_returns_all_deps(self, clear_cache, mock_graphql_schema):
         with patch(
             "open_targets_platform_mcp.tools.schema.type_graph.fetch_graphql_schema",
             new_callable=AsyncMock,
@@ -252,17 +252,19 @@ class TestGetTypeDependencies:
             mock_fetch.return_value = mock_graphql_schema
 
             await type_graph.prefetch_type_graph()
-            result = await type_graph.get_type_dependencies("Target")
+            result = await type_graph.get_type_dependencies(["Target"])
 
-        # Should return SDL string
-        assert isinstance(result, str)
-        # Should contain Target definition
-        assert "type Target" in result
-        # Should contain dependencies
-        assert "type Disease" in result
-        assert "type Drug" in result
-        assert "type Pathway" in result
-        assert "type Mechanism" in result
+        # Should return dict
+        assert isinstance(result, dict)
+        assert "Target" in result
+        assert "shared" in result
+        # Single type: all deps go under the type key, shared is empty
+        all_sdl = result["Target"] + result["shared"]
+        assert "type Target" in all_sdl
+        assert "type Disease" in all_sdl
+        assert "type Drug" in all_sdl
+        assert "type Pathway" in all_sdl
+        assert "type Mechanism" in all_sdl
 
     @pytest.mark.asyncio
     async def test_includes_descriptions(self, clear_cache, mock_graphql_schema):
@@ -273,10 +275,30 @@ class TestGetTypeDependencies:
             mock_fetch.return_value = mock_graphql_schema
 
             await type_graph.prefetch_type_graph()
-            result = await type_graph.get_type_dependencies("Target")
+            result = await type_graph.get_type_dependencies(["Target"])
 
         # Should include type descriptions
-        assert "A target entity representing a gene or protein" in result
+        all_sdl = result["Target"] + result["shared"]
+        assert "A target entity representing a gene or protein" in all_sdl
+
+    @pytest.mark.asyncio
+    async def test_multiple_types_separates_shared(self, clear_cache, mock_graphql_schema):
+        with patch(
+            "open_targets_platform_mcp.tools.schema.type_graph.fetch_graphql_schema",
+            new_callable=AsyncMock,
+        ) as mock_fetch:
+            mock_fetch.return_value = mock_graphql_schema
+
+            await type_graph.prefetch_type_graph()
+            # Target and Disease share some dependencies
+            result = await type_graph.get_type_dependencies(["Target", "Disease"])
+
+        assert "Target" in result
+        assert "Disease" in result
+        assert "shared" in result
+        # Shared types should be in shared, not duplicated
+        # Target and Disease both reach Drug, so Drug should be in shared
+        assert "type Drug" in result["shared"]
 
     @pytest.mark.asyncio
     async def test_raises_for_invalid_type(self, clear_cache, mock_graphql_schema):
@@ -289,7 +311,7 @@ class TestGetTypeDependencies:
             await type_graph.prefetch_type_graph()
 
             with pytest.raises(ValueError, match="not found in schema"):
-                await type_graph.get_type_dependencies("NonExistentType")
+                await type_graph.get_type_dependencies(["NonExistentType"])
 
     @pytest.mark.asyncio
     async def test_suggests_similar_types(self, clear_cache, mock_graphql_schema):
@@ -302,12 +324,12 @@ class TestGetTypeDependencies:
             await type_graph.prefetch_type_graph()
 
             with pytest.raises(ValueError, match="Target"):
-                await type_graph.get_type_dependencies("target")  # lowercase
+                await type_graph.get_type_dependencies(["target"])  # lowercase
 
     @pytest.mark.asyncio
     async def test_raises_if_not_prefetched(self, clear_cache):
         with pytest.raises(RuntimeError, match="not initialized"):
-            await type_graph.get_type_dependencies("Target")
+            await type_graph.get_type_dependencies(["Target"])
 
     @pytest.mark.asyncio
     async def test_leaf_type_returns_only_self(self, clear_cache, mock_graphql_schema):
@@ -318,10 +340,28 @@ class TestGetTypeDependencies:
             mock_fetch.return_value = mock_graphql_schema
 
             await type_graph.prefetch_type_graph()
-            result = await type_graph.get_type_dependencies("Mechanism")
+            result = await type_graph.get_type_dependencies(["Mechanism"])
 
         # Should only contain Mechanism
-        assert "type Mechanism" in result
+        all_sdl = result["Mechanism"] + result["shared"]
+        assert "type Mechanism" in all_sdl
         # Should not contain other types
-        assert "type Target" not in result
-        assert "type Disease" not in result
+        assert "type Target" not in all_sdl
+        assert "type Disease" not in all_sdl
+
+    @pytest.mark.asyncio
+    async def test_disjoint_types_no_shared(self, clear_cache, mock_graphql_schema):
+        with patch(
+            "open_targets_platform_mcp.tools.schema.type_graph.fetch_graphql_schema",
+            new_callable=AsyncMock,
+        ) as mock_fetch:
+            mock_fetch.return_value = mock_graphql_schema
+
+            await type_graph.prefetch_type_graph()
+            # Pathway and Mechanism have no shared dependencies
+            result = await type_graph.get_type_dependencies(["Pathway", "Mechanism"])
+
+        # Each should have only itself, no shared
+        assert "type Pathway" in result["Pathway"]
+        assert "type Mechanism" in result["Mechanism"]
+        assert result["shared"] == ""
