@@ -12,6 +12,7 @@ from open_targets_platform_mcp.tools import (
     batch_query_with_jq,
     batch_query_without_jq,
     get_open_targets_graphql_schema,
+    get_type_dependencies,
     query_with_jq,
     query_without_jq,
     search_entities,
@@ -45,6 +46,7 @@ def create_server() -> FastMCP:
         )
 
     mcp.tool(get_open_targets_graphql_schema)
+    mcp.tool(get_type_dependencies)
     mcp.tool(
         search_entities,
         description=resources.files("open_targets_platform_mcp.tools.search_entities")

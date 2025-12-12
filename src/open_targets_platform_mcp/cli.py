@@ -6,7 +6,7 @@ import typer
 
 from open_targets_platform_mcp.create_server import create_server
 from open_targets_platform_mcp.settings import TransportType, settings
-from open_targets_platform_mcp.tools import prefetch_schema
+from open_targets_platform_mcp.tools import prefetch_schema, prefetch_type_graph
 
 PACKAGE_NAME = "open_targets_platform_mcp"
 PACKAGE_VERSION = metadata.version(PACKAGE_NAME)
@@ -123,8 +123,9 @@ def root(
     """Entry point of CLI."""
     settings.update(**locals())
 
-    # Pre-fetch the GraphQL schema before starting the server
+    # Pre-fetch the GraphQL schema and build type graph before starting the server
     asyncio.run(prefetch_schema())
+    asyncio.run(prefetch_type_graph())
 
     mcp = create_server()
 
