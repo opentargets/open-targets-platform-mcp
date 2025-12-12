@@ -177,8 +177,16 @@ def get_categories_for_docstring() -> str:
     """Format categories for inclusion in tool docstring.
 
     Returns:
-        Formatted string listing all category names.
+        Formatted string listing all categories with descriptions.
     """
     categories = _load_categories()
-    category_names = sorted(categories.keys())
-    return "Available categories: " + ", ".join(category_names)
+
+    lines = ["Available categories:"]
+    for name, data in sorted(categories.items()):
+        description = data.get("description", "")
+        if isinstance(description, str):
+            lines.append(f"  - {name}: {description}")
+        else:
+            lines.append(f"  - {name}")
+
+    return "\n".join(lines)
