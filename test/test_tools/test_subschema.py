@@ -333,3 +333,105 @@ class TestGetCategoriesForDocstring:
         assert "Available categories:" in result
         # Should contain at least one category with description
         assert " - " in result
+
+
+class TestTypesToSdl:
+    """Tests for _types_to_sdl function."""
+
+    def test_strips_type_descriptions(self):
+        """SDL output should not contain type-level descriptions."""
+        schema_with_desc = build_schema(
+            '''
+            """This is the Target type description"""
+            type Target {
+                """Field description for id"""
+                id: String!
+            }
+            '''
+        )
+
+        result = subschema._types_to_sdl({"Target"}, schema_with_desc)
+
+        # Type description should be stripped
+        assert "This is the Target type description" not in result
+        # Field description should be preserved
+        assert "Field description for id" in result
+        # Type definition should be present
+        assert "type Target" in result
+
+    def test_preserves_field_descriptions(self):
+        """SDL output should preserve field descriptions."""
+        schema_with_desc = build_schema(
+            '''
+            type Target {
+                """Field description for id"""
+                id: String!
+                """Another field description"""
+                name: String
+            }
+            '''
+        )
+
+        result = subschema._types_to_sdl({"Target"}, schema_with_desc)
+
+        assert "Field description for id" in result
+        assert "Another field description" in result
+
+    def test_preserves_argument_descriptions(self):
+        """SDL output should preserve argument descriptions."""
+        schema_with_args = build_schema(
+            '''
+            type Query {
+                target(
+                    """The ENSEMBL gene ID"""
+                    ensemblId: String!
+                ): Target
+            }
+
+            type Target {
+                id: String!
+            }
+            '''
+        )
+
+        result = subschema._types_to_sdl({"Query", "Target"}, schema_with_args)
+
+        assert "The ENSEMBL gene ID" in result
+        assert "ensemblId: String!" in result
+
+    def test_no_duplicate_types(self, mock_graphql_schema):
+        """SDL output should not contain duplicate type definitions."""
+        graph = type_graph.build_type_graph(mock_graphql_schema)
+
+        cat_data_1 = {"description": "Test 1", "types": ["Target", "Disease"]}
+        cat_data_2 = {"description": "Test 2", "types": ["Disease", "Drug"]}
+
+        subschema_1 = subschema._build_category_subschema(
+            "cat1", cat_data_1, graph, mock_graphql_schema, depth=1
+        )
+        subschema_2 = subschema._build_category_subschema(
+            "cat2", cat_data_2, graph, mock_graphql_schema, depth=1
+        )
+
+        all_types = subschema_1.types | subschema_2.types
+        result = subschema._types_to_sdl(all_types, mock_graphql_schema)
+
+        assert result.count("type Target {") == 1
+        assert result.count("type Disease {") == 1
+        assert result.count("type Drug {") == 1
+
+    def test_restores_type_description_after_call(self):
+        """Original type description should be restored after _types_to_sdl."""
+        schema_with_desc = build_schema(
+            '''
+            """This is the Target type description"""
+            type Target {
+                id: String!
+            }
+            '''
+        )
+
+        original_desc = schema_with_desc.type_map["Target"].description
+        subschema._types_to_sdl({"Target"}, schema_with_desc)
+
+        assert schema_with_desc.type_map["Target"].description == original_desc

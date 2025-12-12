@@ -61,12 +61,27 @@ def _load_categories() -> dict[str, dict[str, str | list[str]]]:
 
 
 def _types_to_sdl(type_names: set[str], schema: GraphQLSchema) -> str:
-    """Convert a set of type names to SDL string."""
+    """Convert a set of type names to SDL string.
+
+    Strips type-level descriptions, preserves field/argument descriptions.
+    """
     sdl_parts: list[str] = []
     for type_name in sorted(type_names):
         graphql_type = schema.type_map.get(type_name)
-        if graphql_type:
-            sdl_parts.append(print_type(graphql_type))
+        if not graphql_type:
+            continue
+
+        # Store and clear type-level description only
+        original_type_desc = getattr(graphql_type, "description", None)
+        if hasattr(graphql_type, "description"):
+            graphql_type.description = None  # type: ignore[union-attr]
+
+        sdl_parts.append(print_type(graphql_type))
+
+        # Restore type description
+        if hasattr(graphql_type, "description"):
+            graphql_type.description = original_type_desc  # type: ignore[union-attr]
+
     return "\n\n".join(sdl_parts)
 
 
