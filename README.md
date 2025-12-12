@@ -28,7 +28,7 @@ This package is the official Open Targets Platform MCP server implementation tha
 - 📊 **Query Execution**: Execute custom GraphQL queries against the Open Targets Platform API
 - ⚡ **Batch Query Processing**: Execute the same query multiple times with different parameters efficiently
 - 🔎 **Entity Search**: Search for entities across multiple types (targets, diseases, drugs, variants, studies)
-- 🛠️ **CLI Tools**: Easy-to-use command-line interface for server instantiation
+- 🛠️ **CLI Tools**: Easy-to-use command-line interface for starting the server
 - 🎯 **jq Filtering** (Optional): Server-side JSON processing using [jq](https://jqlang.org/) to reduce token consumption and improve performance
 
 ## Official MCP Server
@@ -74,7 +74,7 @@ docker run -d \
 docker run -d \
   -p 8000:8000 \
   -e OTP_MCP_HTTP_HOST=0.0.0.0 \
-  -e OTP_MCP_jq_ENABLED=true \
+  -e OTP_MCP_JQ_ENABLED=true \
   ghcr.io/opentargets/open-targets-platform-mcp
 ```
 
@@ -96,7 +96,7 @@ uv sync --python 3.10
 
 ### FastMCP CLI
 
-For advanced usage and to exploit all FastMCP options, you can use the FastMCP CLI directly with the server module:
+For advanced usage and to utilize all FastMCP options, you can use the FastMCP CLI directly with the server module:
 
 ```bash
 # Run using FastMCP CLI
@@ -138,7 +138,7 @@ Configure the server using environment variables (all prefixed with `OTP_MCP_`).
 | `OTP_MCP_HTTP_HOST` | `--host` | HTTP server host (only used with `http` transport) | `localhost` |
 | `OTP_MCP_HTTP_PORT` | `--port` | HTTP server port (only used with `http` transport) | `8000` |
 | `OTP_MCP_API_CALL_TIMEOUT` | `--timeout` | Request timeout in seconds for API calls | `30` |
-| `OTP_MCP_jq_ENABLED` | `--jq` | Enable jq filtering support | `false` |
+| `OTP_MCP_JQ_ENABLED` | `--jq` | Enable jq filtering support | `false` |
 | `OTP_MCP_RATE_LIMITING_ENABLED` | `--rate-limiting` | Enable rate limiting | `false` |
 
 **Examples:**
@@ -146,7 +146,7 @@ Configure the server using environment variables (all prefixed with `OTP_MCP_`).
 **Using environment variables:**
 ```bash
 export OTP_MCP_TRANSPORT=stdio
-export OTP_MCP_jq_ENABLED=true
+export OTP_MCP_JQ_ENABLED=true
 otp-mcp
 ```
 
@@ -243,11 +243,12 @@ open-targets-platform-mcp/
 │   │   └── graphql.py       # GraphQL client implementation
 │   ├── model/               # Data models
 │   │   └── result.py        # Query result models
+│   ├── middleware/          # Middleware components
+│   │   └── AdaptiveRateLimitingMiddleware.py  # Rate limiting middleware
 │   ├── tools/               # MCP tools (organized by feature)
 │   │   ├── __init__.py      # Tool exports
 │   │   ├── schema/          # Schema fetching tool
-│   │   │   ├── schema.py
-│   │   │   └── schema.txt
+│   │   │   └── schema.py
 │   │   ├── query/           # Query execution tool
 │   │   │   ├── query.py
 │   │   │   ├── with_jq_description.txt
@@ -261,7 +262,7 @@ open-targets-platform-mcp/
 │   │       └── description.txt
 │   └── static/              # Static assets
 │       └── favicon.png
-├── tests/                   # Test suite
+├── test/                    # Test suite
 │   ├── conftest.py
 │   ├── test_client/
 │   │   └── test_graphql.py
