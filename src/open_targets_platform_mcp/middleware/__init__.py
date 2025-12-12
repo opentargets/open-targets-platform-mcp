@@ -1,0 +1,3 @@
+from open_targets_platform_mcp.middleware.AdaptiveRateLimitingMiddleware import AdaptiveRateLimitingMiddleware
+
+__all__ = ["AdaptiveRateLimitingMiddleware"]

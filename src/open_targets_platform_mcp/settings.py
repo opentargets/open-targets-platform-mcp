@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     transport: TransportType = TransportType.HTTP
     http_host: str = "localhost"
     http_port: int = 8000
+    rate_limiting_enabled: bool = False
     jq_enabled: bool = False
 
     def update(self, **kwargs: Any) -> None:

@@ -4,9 +4,9 @@ import base64
 from importlib import resources
 
 from fastmcp import FastMCP
-from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
 from mcp.types import Icon
 
+from open_targets_platform_mcp.middleware import AdaptiveRateLimitingMiddleware
 from open_targets_platform_mcp.settings import settings
 from open_targets_platform_mcp.tools import (
     batch_query_with_jq,
@@ -34,7 +34,15 @@ def create_server() -> FastMCP:
         mask_error_details=True,
     )
 
-    mcp.add_middleware(RateLimitingMiddleware(max_requests_per_second=3))
+    if settings.rate_limiting_enabled:
+        mcp.add_middleware(
+            AdaptiveRateLimitingMiddleware(
+                global_max_requests_per_second=3,
+                global_burst_capacity=100,
+                session_max_requests_per_second=3,
+                session_burst_capacity=6,
+            ),
+        )
 
     mcp.tool(get_open_targets_graphql_schema)
     mcp.tool(
@@ -45,30 +53,33 @@ def create_server() -> FastMCP:
     )
 
     if settings.jq_enabled:
-        mcp.tool(
-            query_with_jq,
-            description=resources.files("open_targets_platform_mcp.tools.query")
+        query_function = query_with_jq
+        query_description = (
+            resources.files("open_targets_platform_mcp.tools.query")
             .joinpath("with_jq_description.txt")
-            .read_text(encoding="utf-8"),
+            .read_text(encoding="utf-8")
         )
-        mcp.tool(
-            batch_query_with_jq,
-            description=resources.files("open_targets_platform_mcp.tools.batch_query")
+        batch_query_function = batch_query_with_jq
+        batch_query_description = (
+            resources.files("open_targets_platform_mcp.tools.batch_query")
             .joinpath("with_jq_description.txt")
-            .read_text(encoding="utf-8"),
+            .read_text(encoding="utf-8")
         )
     else:
-        mcp.tool(
-            query_without_jq,
-            description=resources.files("open_targets_platform_mcp.tools.query")
+        query_function = query_without_jq
+        query_description = (
+            resources.files("open_targets_platform_mcp.tools.query")
             .joinpath("without_jq_description.txt")
-            .read_text(encoding="utf-8"),
+            .read_text(encoding="utf-8")
         )
-        mcp.tool(
-            batch_query_without_jq,
-            description=resources.files("open_targets_platform_mcp.tools.batch_query")
+        batch_query_function = batch_query_without_jq
+        batch_query_description = (
+            resources.files("open_targets_platform_mcp.tools.batch_query")
             .joinpath("without_jq_description.txt")
-            .read_text(encoding="utf-8"),
+            .read_text(encoding="utf-8")
         )
+
+    mcp.tool(query_function, name="query", description=query_description)
+    mcp.tool(batch_query_function, name="batch_query", description=batch_query_description)
 
     return mcp

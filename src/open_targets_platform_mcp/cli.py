@@ -110,6 +110,14 @@ def root(
             show_default=True,
         ),
     ] = settings.api_call_timeout,
+    rate_limiting_enabled: Annotated[
+        bool | None,
+        typer.Option(
+            "--rate-limiting",
+            help="Enable rate limiting",
+            show_default=True,
+        ),
+    ] = settings.rate_limiting_enabled,
 ) -> None:
     """Entry point of CLI."""
     settings.update(**locals())
