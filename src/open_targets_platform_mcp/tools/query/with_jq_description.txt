@@ -35,35 +35,8 @@ Step 3: CONSTRUCT QUERY WITH JQ FILTER
     Build GraphQL query using:
     - Standardized IDs from Step 1 (REQUIRED)
     - Query patterns from Step 2
+    - Follow the "COMMON MISTAKES TO AVOID" guidance in the schema output
     - jq filter for targeted information extraction
-
-    GRAPHQL VARIABLE USAGE:
-    If using variables, you MUST declare them in the operation definition.
-    Queries with undeclared variables will fail.
-
-    CORRECT format (variables declared):
-        query($ensemblId: String!) {
-            target(ensemblId: $ensemblId) {
-                approvedSymbol
-                approvedName
-            }
-        }
-        variables: {"ensemblId": "ENSG00000139618"}
-
-    INCORRECT format (variables NOT declared - WILL FAIL):
-        query {
-            target(ensemblId: $ensemblId) {
-                approvedSymbol
-            }
-        }
-
-    Alternatively, you can inline the values directly (no variables needed):
-        query {
-            target(ensemblId: "ENSG00000139618") {
-                approvedSymbol
-                approvedName
-            }
-        }
 
     JQ FILTER REQUIREMENT:
     When you're after specific information, ALWAYS include a jq_filter to return

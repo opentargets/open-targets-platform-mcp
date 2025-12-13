@@ -28,6 +28,115 @@ async def prefetch_schema() -> None:
     _cached_schema = print_schema(schema_obj)
 
 
+_COMMON_MISTAKES_GUIDE = """
+# GRAPHQL VARIABLE DECLARATION REQUIREMENT
+
+When using variables in your query, you MUST declare them in the operation definition.
+Queries with undeclared variables will fail.
+
+✅ CORRECT format (variables declared):
+    query($ensemblId: String!) {
+        target(ensemblId: $ensemblId) {
+            approvedSymbol
+            approvedName
+        }
+    }
+    variables: {"ensemblId": "ENSG00000139618"}
+
+❌ INCORRECT format (variables NOT declared - WILL FAIL):
+    query {
+        target(ensemblId: $ensemblId) {
+            approvedSymbol
+        }
+    }
+
+Alternatively, you can inline the values directly (no variables needed):
+    query {
+        target(ensemblId: "ENSG00000139618") {
+            approvedSymbol
+            approvedName
+        }
+    }
+
+# COMMON MISTAKES TO AVOID
+
+## 1. Wrong argument names for root queries (use specific ID parameter, NOT generic "id"):
+   ❌ target(id: "ENSG...")           →  ✅ target(ensemblId: "ENSG...")
+   ❌ disease(id: "EFO_...")          →  ✅ disease(efoId: "EFO_...")
+   ❌ variant(id: "1_123_A_G")        →  ✅ variant(variantId: "1_123_A_G")
+   ❌ drug(id: "CHEMBL...")           →  ✅ drug(chemblId: "CHEMBL...")
+
+## 2. Wrong field names:
+   ❌ target { symbol }               →  ✅ target { approvedSymbol }
+   ❌ target { name }                 →  ✅ target { approvedName }
+   ❌ drug { chemblId }               →  ✅ drug { id }  (chemblId IS the id)
+   ❌ study { studyId }               →  ✅ study { id }  (studyId IS the id)
+
+## 3. Non-existent root queries:
+   ❌ variantInfo(...)                →  ✅ variant(variantId: ...)
+   ❌ variants(variantIds: [...])     →  Use batch_query with variant() instead
+
+## 4. Fields requiring subselections (cannot query scalar-style):
+   ❌ target { proteinIds }           →  ✅ target { proteinIds { id source } }
+   ❌ target { synonyms }             →  ✅ target { synonyms { label source } }
+   ❌ disease { synonyms }            →  ✅ disease { synonyms { terms } }
+
+# WORKING EXAMPLES
+
+## Example 1 - Target query showing correct argument (ensemblId) and field names (approvedSymbol):
+    query {
+        target(ensemblId: "ENSG00000141510") {
+            approvedSymbol
+            approvedName
+            biotype
+        }
+    }
+
+## Example 2 - Drug query showing that "id" field returns the ChEMBL ID (don't use chemblId field):
+    query {
+        drug(chemblId: "CHEMBL1201583") {
+            id
+            name
+            maximumClinicalTrialPhase
+            hasBeenWithdrawn
+        }
+    }
+
+## Example 3 - Disease query showing correct argument (efoId) and pagination with associatedTargets:
+    query {
+        disease(efoId: "EFO_0000311") {
+            id
+            name
+            associatedTargets(page: {index: 0, size: 10}) {
+                count
+                rows {
+                    target { approvedSymbol }
+                    score
+                }
+            }
+        }
+    }
+
+## Example 4 - Variant query showing correct argument (variantId) instead of wrong "id" or "variantInfo":
+    query {
+        variant(variantId: "19_44908822_C_T") {
+            id
+            rsIds
+            mostSevereConsequence { id label }
+        }
+    }
+
+## Example 5 - Target query showing fields that require subselections (proteinIds, synonyms):
+    query {
+        target(ensemblId: "ENSG00000141510") {
+            approvedSymbol
+            proteinIds { id source }
+            synonyms { label source }
+        }
+    }
+"""
+
+
 async def get_open_targets_graphql_schema(
     categories: Annotated[
         list[str],
@@ -62,7 +171,10 @@ async def get_open_targets_graphql_schema(
 
     # Generate combined SDL
     schema_obj = get_cached_schema()
-    return _types_to_sdl(all_types, schema_obj)
+    sdl = _types_to_sdl(all_types, schema_obj)
+
+    # Append common mistakes guide
+    return sdl + "\n" + _COMMON_MISTAKES_GUIDE
 
 
 # Dynamically set the docstring with the categories list

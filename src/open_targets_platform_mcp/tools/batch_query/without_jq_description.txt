@@ -38,33 +38,7 @@ Step 3: CONSTRUCT AND EXECUTE BATCH QUERY
     Build GraphQL query and variables_list using:
     - Standardized IDs from Step 1 (REQUIRED)
     - Query patterns from Step 2
-
-    CRITICAL - VARIABLE DECLARATION REQUIREMENT:
-    When using variables in your query, you MUST declare them in the operation
-    definition. Queries with undeclared variables will fail.
-
-    CORRECT format (variables declared):
-        query($ensemblId: String!) {
-            target(ensemblId: $ensemblId) {
-                approvedSymbol
-                approvedName
-            }
-        }
-
-    INCORRECT format (variables NOT declared - WILL FAIL):
-        query {
-            target(ensemblId: $ensemblId) {
-                approvedSymbol
-            }
-        }
-
-    Example with multiple variables:
-        query($chemblId: String!, $size: Int!) {
-            drug(chemblId: $chemblId) {
-                name
-                knownDrugs(size: $size) { count }
-            }
-        }
+    - Follow the "COMMON MISTAKES TO AVOID" guidance in the schema output
 
     Call this tool with query_string, variables_list, and key_field.
 
