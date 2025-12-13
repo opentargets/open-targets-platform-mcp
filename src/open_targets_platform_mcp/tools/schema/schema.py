@@ -7,9 +7,9 @@ from pydantic import Field
 
 from open_targets_platform_mcp.client.graphql import fetch_graphql_schema
 from open_targets_platform_mcp.tools.schema.subschema import (
-    _types_to_sdl,
     get_categories_for_docstring,
     get_category_subschemas,
+    types_to_sdl,
 )
 from open_targets_platform_mcp.tools.schema.type_graph import get_cached_schema
 
@@ -171,7 +171,7 @@ async def get_open_targets_graphql_schema(
 
     # Generate combined SDL
     schema_obj = get_cached_schema()
-    sdl = _types_to_sdl(all_types, schema_obj)
+    sdl = types_to_sdl(all_types, schema_obj)
 
     # Append common mistakes guide
     return sdl + "\n" + _COMMON_MISTAKES_GUIDE

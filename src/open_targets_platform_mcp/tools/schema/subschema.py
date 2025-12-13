@@ -60,7 +60,7 @@ def _load_categories() -> dict[str, dict[str, str | list[str]]]:
     return result
 
 
-def _types_to_sdl(type_names: set[str], schema: GraphQLSchema) -> str:
+def types_to_sdl(type_names: set[str], schema: GraphQLSchema) -> str:
     """Convert a set of type names to SDL string.
 
     Strips type-level descriptions, preserves field/argument descriptions.
@@ -118,7 +118,7 @@ def _build_category_subschema(
     expanded_types = get_reachable_types_with_depth(graph, valid_seed_types, max_depth)
 
     # Convert to SDL
-    sdl = _types_to_sdl(expanded_types, schema)
+    sdl = types_to_sdl(expanded_types, schema)
 
     # Get description (guaranteed to be a string)
     description = category_data.get("description", "")
