@@ -44,12 +44,13 @@ def create_server() -> FastMCP:
             ),
         )
 
-    mcp.tool(get_open_targets_graphql_schema)
+    mcp.tool(get_open_targets_graphql_schema, annotations={"readOnlyHint": True})
     mcp.tool(
         search_entities,
         description=resources.files("open_targets_platform_mcp.tools.search_entities")
         .joinpath("description.txt")
         .read_text(encoding="utf-8"),
+        annotations={"readOnlyHint": True},
     )
 
     if settings.jq_enabled:
@@ -79,7 +80,17 @@ def create_server() -> FastMCP:
             .read_text(encoding="utf-8")
         )
 
-    mcp.tool(query_function, name="query_open_targets_graphql", description=query_description)
-    mcp.tool(batch_query_function, name="batch_query_open_targets_graphql", description=batch_query_description)
+    mcp.tool(
+        query_function,
+        name="query_open_targets_graphql",
+        description=query_description,
+        annotations={"readOnlyHint": True},
+    )
+    mcp.tool(
+        batch_query_function,
+        name="batch_query_open_targets_graphql",
+        description=batch_query_description,
+        annotations={"readOnlyHint": True},
+    )
 
     return mcp

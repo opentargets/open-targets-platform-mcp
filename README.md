@@ -36,9 +36,7 @@ This package is the official Open Targets Platform MCP server implementation tha
 
 ## Official MCP Server
 
-The easiest way to use Open Targets Platform MCP is through the hosted service provided by Open Targets infrastructure.
-
-> **Note**: The official hosted endpoint is currently planned and will be announced when deployed.
+The easiest way to use Open Targets Platform MCP is through the hosted service provided by Open Targets infrastructure at `https://mcp.platform.opentargets.org/mcp`
 
 ## Local Deployment
 
