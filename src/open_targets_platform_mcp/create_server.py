@@ -1,7 +1,7 @@
 """Server setup and configuration for Open Targets Platform MCP."""
 
 import base64
-from importlib import resources
+from importlib import metadata, resources
 
 from fastmcp import FastMCP
 from mcp.types import Icon
@@ -78,9 +78,13 @@ def create_server() -> FastMCP:
                     </tr>
             """
 
+        # Get package version
+        version = metadata.version("open_targets_platform_mcp")
+
         # Replace template variables
         html_content = template_content.replace("{{ server_name }}", settings.server_name)
         html_content = html_content.replace("{{ logo_url }}", logo_data_uri)
+        html_content = html_content.replace("{{ version }}", version)
         html_content = html_content.replace("{{ tools }}", tools_html)
         html_content = html_content.replace("{{ mcp_url }}", mcp_url)
         html_content = html_content.replace("{{ health_url }}", health_url)
