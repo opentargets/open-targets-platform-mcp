@@ -1,0 +1,84 @@
+Get detailed information about a specific GraphQL type.
+
+This tool returns comprehensive details for ONE type, including all fields,
+arguments, return types, descriptions, and interface implementations.
+
+WHEN TO USE:
+- After using list_schema_types() to identify relevant types
+- When you need to understand a type's structure to construct a query
+- To explore nested relationships (e.g., Target → AssociatedDiseases → Disease)
+
+WORKFLOW:
+1. list_schema_types() → Identify "Target" type
+2. get_type_details("Target") → See all fields: id, approvedSymbol, associatedDiseases, etc.
+3. get_type_details("Disease") → Understand nested type structure
+4. Construct query using discovered fields
+
+EXAMPLE REQUEST:
+type_name: "Target"
+
+EXAMPLE RESPONSE:
+{
+    "name": "Target",
+    "kind": "OBJECT",
+    "description": "Target represents a gene or protein that can be targeted...",
+    "fields": [
+        {
+            "name": "id",
+            "type": "String!",
+            "description": "ENSEMBL gene identifier",
+            "args": []
+        },
+        {
+            "name": "approvedSymbol",
+            "type": "String",
+            "description": "Approved gene symbol",
+            "args": []
+        },
+        {
+            "name": "associatedDiseases",
+            "type": "DiseasePaginated",
+            "description": "Diseases associated with this target",
+            "args": [
+                {
+                    "name": "page",
+                    "type": "Int",
+                    "default_value": 0,
+                    "description": "Page number for pagination"
+                },
+                {
+                    "name": "size",
+                    "type": "Int",
+                    "default_value": 10,
+                    "description": "Results per page"
+                }
+            ]
+        },
+        {
+            "name": "cancerBiomarkers",
+            "type": "[CancerBiomarker]",
+            "description": "Cancer biomarkers for this target",
+            "args": []
+        },
+        ...
+    ],
+    "implements_interfaces": ["Node"]
+}
+
+TYPE FORMATS:
+- String! = non-null string
+- String = nullable string
+- [String] = list of strings
+- [String!]! = non-null list of non-null strings
+
+ERROR HANDLING:
+If type doesn't exist, suggests similar types or recommends list_schema_types().
+
+Example error: "Type 'Targed' not found in schema. Did you mean one of: Target, TargetFilter?"
+
+TOKEN BUDGET: Approximately 200-500 tokens per type (only fetch what you need)
+
+NEXT STEPS:
+- Use get_type_details() recursively for nested types
+- Use search_schema() to find specific fields
+- Construct GraphQL query with discovered structure

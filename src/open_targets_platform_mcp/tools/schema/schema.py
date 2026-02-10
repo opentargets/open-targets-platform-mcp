@@ -19,6 +19,19 @@ _cache_lock = asyncio.Lock()
 async def get_open_targets_graphql_schema() -> str:
     """Retrieve the Open Targets Platform GraphQL schema.
 
+    **DEPRECATION NOTICE**: This tool returns the entire schema as a large text
+    dump (~30,000 tokens), which pollutes the conversation context. For most use
+    cases, prefer the RLM-based schema exploration tools:
+    - list_schema_types() - Get overview of available types
+    - get_type_details() - Get details for specific types
+    - search_schema() - Search for relevant fields
+
+    These tools enable incremental discovery using ~500-2,000 tokens instead of
+    30,000+, following the Recursive Language Model (RLM) pattern.
+
+    This tool remains available for specialized use cases requiring the complete
+    raw SDL schema but is not recommended for routine query construction.
+
     Fetches the latest schema dynamically from the API using
     the gql client's built-in schema fetching. Results are cached
     for 1 hour to reduce API calls.

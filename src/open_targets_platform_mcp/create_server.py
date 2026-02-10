@@ -12,9 +12,12 @@ from open_targets_platform_mcp.tools import (
     batch_query_with_jq,
     batch_query_without_jq,
     get_open_targets_graphql_schema,
+    get_type_details,
+    list_schema_types,
     query_with_jq,
     query_without_jq,
     search_entities,
+    search_schema,
 )
 
 
@@ -44,7 +47,33 @@ def create_server() -> FastMCP:
             ),
         )
 
+    # RLM-based schema exploration tools (recommended)
+    mcp.tool(
+        list_schema_types,
+        description=resources.files("open_targets_platform_mcp.tools.list_schema_types")
+        .joinpath("description.txt")
+        .read_text(encoding="utf-8"),
+        annotations={"readOnlyHint": True},
+    )
+    mcp.tool(
+        get_type_details,
+        description=resources.files("open_targets_platform_mcp.tools.get_type_details")
+        .joinpath("description.txt")
+        .read_text(encoding="utf-8"),
+        annotations={"readOnlyHint": True},
+    )
+    mcp.tool(
+        search_schema,
+        description=resources.files("open_targets_platform_mcp.tools.search_schema")
+        .joinpath("description.txt")
+        .read_text(encoding="utf-8"),
+        annotations={"readOnlyHint": True},
+    )
+
+    # Legacy schema tool (kept for backwards compatibility)
     mcp.tool(get_open_targets_graphql_schema, annotations={"readOnlyHint": True})
+
+    # Entity search tool
     mcp.tool(
         search_entities,
         description=resources.files("open_targets_platform_mcp.tools.search_entities")

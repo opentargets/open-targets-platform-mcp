@@ -13,11 +13,21 @@ Step 1: RESOLVE IDENTIFIERS
 
     Example: search_entity(query_string="BRCA2", entity_names=["target"])
 
-Step 2: LEARN QUERY STRUCTURE
-    Call `get_open_targets_graphql_schema` to retrieve the full API schema.
-    Study the schema to understand available types, fields, and their
-    relationships, then construct a GraphQL query that fetches the
-    information the user needs.
+Step 2: EXPLORE SCHEMA (RLM Pattern - Recommended)
+    Use incremental schema exploration to understand available data without
+    loading the entire 30K token schema:
+
+    a) Start with list_schema_types() to see Query entry points and available types
+    b) Use search_schema(pattern="<concept>") to find relevant types and fields
+    c) Use get_type_details(type_name="<Type>") for specific field structures
+    d) Repeat as needed to understand nested relationships
+
+    This approach keeps context clean by fetching only relevant schema parts
+    (typically 500-2,000 tokens vs 30,000+).
+
+    LEGACY: get_open_targets_graphql_schema() still available but NOT
+    recommended for routine use due to context consumption (30,000+ tokens).
+    Only use if you need the complete raw SDL schema for specialized purposes.
 
 Step 3: CONSTRUCT AND EXECUTE QUERY
     Build GraphQL query using:

@@ -153,6 +153,112 @@ def mock_graphql_schema() -> GraphQLSchema:
 
 
 @pytest.fixture
+def rich_mock_schema() -> GraphQLSchema:
+    """Comprehensive GraphQL schema for RLM testing."""
+    schema_definition = """
+    type Query {
+        target(ensemblId: String!): Target
+        disease(efoId: String!): Disease
+        drug(chemblId: String!): Drug
+        search(queryString: String!, page: Int = 0): SearchResult
+    }
+
+    interface Node {
+        id: String!
+    }
+
+    type Target implements Node {
+        id: String!
+        approvedSymbol: String
+        approvedName: String
+        cancerBiomarkers: [CancerBiomarker]
+        associatedDiseases(page: Int = 0, size: Int = 10): DiseasePaginated
+        proteinAnnotations: ProteinAnnotations
+    }
+
+    type Disease implements Node {
+        id: String!
+        name: String!
+        description: String
+        therapeuticAreas: [TherapeuticArea]
+        synonyms: [String]
+    }
+
+    type Drug implements Node {
+        id: String!
+        name: String!
+        maximumClinicalTrialPhase: Int
+        tradeNames: [String]
+    }
+
+    type CancerBiomarker {
+        id: String!
+        diseaseFromSource: String
+        biomarkerName: String
+    }
+
+    type DiseasePaginated {
+        count: Int!
+        rows: [Disease]!
+    }
+
+    type TherapeuticArea {
+        id: String!
+        name: String!
+    }
+
+    type ProteinAnnotations {
+        id: String!
+        functions: [String]
+        subcellularLocations: [String]
+    }
+
+    type SearchResult {
+        total: Int!
+        hits: [SearchHit]
+    }
+
+    type SearchHit {
+        id: String!
+        entity: String!
+        name: String
+        score: Float
+    }
+
+    input TargetFilter {
+        symbol: String
+        minAssociationScore: Float
+        therapeuticArea: String
+    }
+
+    input DiseaseFilter {
+        therapeuticArea: String
+        minPrevalence: Float
+    }
+
+    enum EntityType {
+        TARGET
+        DISEASE
+        DRUG
+        VARIANT
+        STUDY
+    }
+
+    enum ClinicalPhase {
+        PHASE_0
+        PHASE_1
+        PHASE_2
+        PHASE_3
+        PHASE_4
+    }
+
+    scalar JSON
+    scalar Date
+    """
+    return build_schema(schema_definition)
+
+
+@pytest.fixture
 def mock_graphql_client(sample_graphql_response, mock_graphql_schema):
     """Mock GQL Client for testing."""
     client = MagicMock()
@@ -161,6 +267,21 @@ def mock_graphql_client(sample_graphql_response, mock_graphql_schema):
     client.__enter__ = Mock(return_value=client)
     client.__exit__ = Mock(return_value=False)
     return client
+
+
+@pytest.fixture
+def clear_schema_cache():
+    """Clear all schema caches before and after test."""
+    from open_targets_platform_mcp.tools.schema import schema
+    from open_targets_platform_mcp.tools.schema_explorer import schema_explorer
+
+    schema._cache.clear()
+    schema_explorer._explorer_cache.clear()
+
+    yield
+
+    schema._cache.clear()
+    schema_explorer._explorer_cache.clear()
 
 
 # ============================================================================

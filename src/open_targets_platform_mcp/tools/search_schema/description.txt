@@ -1,0 +1,85 @@
+Search the Open Targets Platform GraphQL schema for types and fields.
+
+This tool searches for types and fields matching a keyword or concept, helping
+you discover relevant parts of the schema without loading the entire structure.
+
+WHEN TO USE:
+- When user mentions a concept and you need to find related schema elements
+- To discover field names containing specific terms
+- To find types related to a domain (e.g., "cancer", "clinical", "genetic")
+
+SEARCH SCOPES:
+- field_names: Search in field names across all types
+- type_names: Search in type names
+- descriptions: Search in field and type descriptions
+- Default (no search_in): Search all locations
+
+EXAMPLE USAGE:
+
+1. User asks: "Find cancer-related data for BRCA1"
+   search_schema("cancer", ["field_names", "descriptions"])
+   → Finds: cancerBiomarkers field, CancerHallmark type, etc.
+
+2. User asks: "What clinical trial information is available?"
+   search_schema("clinical trial")
+   → Finds: maximumClinicalTrialPhase, clinicalTrials field, etc.
+
+3. User asks: "Find association data"
+   search_schema("association", ["field_names"])
+   → Finds: associatedDiseases, associatedTargets, associationScore fields
+
+EXAMPLE RESPONSE:
+{
+    "query": "cancer",
+    "matches": {
+        "types": [
+            {
+                "name": "CancerBiomarker",
+                "kind": "OBJECT",
+                "description": "Cancer biomarker information",
+                "match_reason": "type_name"
+            },
+            {
+                "name": "CancerHallmark",
+                "kind": "OBJECT",
+                "description": "Cancer hallmark annotation",
+                "match_reason": "type_name"
+            }
+        ],
+        "fields": [
+            {
+                "type_name": "Target",
+                "field_name": "cancerBiomarkers",
+                "field_type": "[CancerBiomarker]",
+                "description": "Cancer biomarkers for this target",
+                "match_reason": "field_name"
+            },
+            {
+                "type_name": "Disease",
+                "field_name": "therapeuticAreas",
+                "field_type": "[TherapeuticArea]",
+                "description": "Includes cancer classifications",
+                "match_reason": "description"
+            }
+        ]
+    },
+    "total_matches": 15
+}
+
+SEARCH STRATEGY:
+- Case-insensitive substring matching
+- Searches across multiple locations simultaneously
+- Deduplicates results (same field won't appear twice)
+- Returns match_reason to show where pattern was found
+
+WORKFLOW:
+1. search_schema("cancer") → Find cancer-related types/fields
+2. get_type_details("Target") → Confirm cancerBiomarkers field exists
+3. Construct query using discovered field
+
+TOKEN BUDGET: Approximately 300-800 tokens depending on number of matches
+
+NEXT STEPS:
+- Use get_type_details() to explore matched types in detail
+- Refine search with different patterns or scopes
+- Construct GraphQL query with discovered fields

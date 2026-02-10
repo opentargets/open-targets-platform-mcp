@@ -1,0 +1,82 @@
+List all types in the Open Targets Platform GraphQL schema.
+
+This tool provides a high-level overview of the schema structure, showing
+available Query entry points, Object types, Input types, Enums, and custom Scalars.
+
+USE THIS AS THE STARTING POINT for RLM-based schema exploration. Instead of
+fetching the entire schema (30,000+ tokens), start here to understand what's
+available (500-1000 tokens), then use get_type_details() for specific types.
+
+WORKFLOW:
+1. Call list_schema_types() to see all available types
+2. Identify relevant types based on user query
+3. Use get_type_details(type_name) to explore specific types
+4. Construct GraphQL query using the discovered structure
+
+FILTERING:
+Use type_filter to focus on specific categories:
+- ["query"] - Only show Query entry points
+- ["object", "input"] - Show Object and Input types
+- Default (no filter) - Show all categories
+
+EXAMPLE RESPONSE:
+{
+    "query_fields": [
+        {
+            "name": "target",
+            "description": "Get information about a gene or protein target",
+            "args": ["ensemblId: String!"],
+            "return_type": "Target"
+        },
+        {
+            "name": "disease",
+            "description": "Get information about a disease",
+            "args": ["efoId: String!"],
+            "return_type": "Disease"
+        },
+        ...
+    ],
+    "object_types": [
+        {
+            "name": "Target",
+            "description": "Target represents a gene or protein",
+            "field_count": 47
+        },
+        {
+            "name": "Disease",
+            "description": "Disease represents a pathological condition",
+            "field_count": 32
+        },
+        ...
+    ],
+    "input_types": [
+        {
+            "name": "TargetFilter",
+            "description": "Filter criteria for target queries",
+            "field_count": 5
+        },
+        ...
+    ],
+    "enum_types": [
+        {
+            "name": "EntityType",
+            "description": "Types of entities in Open Targets",
+            "values": ["TARGET", "DISEASE", "DRUG", "VARIANT", "STUDY"]
+        },
+        ...
+    ],
+    "scalar_types": [
+        {
+            "name": "JSON",
+            "description": "Custom JSON scalar type"
+        },
+        ...
+    ]
+}
+
+TOKEN BUDGET: Approximately 500-1000 tokens (vs 30,000 for full schema)
+
+NEXT STEPS:
+- Use get_type_details("TypeName") to explore specific types
+- Use search_schema("keyword") to find relevant fields
+- Construct GraphQL query with discovered fields
