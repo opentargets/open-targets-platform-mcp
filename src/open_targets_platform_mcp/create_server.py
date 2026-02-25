@@ -6,7 +6,7 @@ from importlib import metadata, resources
 from fastmcp import FastMCP
 from mcp.types import Icon
 from starlette.requests import Request
-from starlette.responses import HTMLResponse
+from starlette.responses import HTMLResponse, JSONResponse
 
 from open_targets_platform_mcp.middleware import AdaptiveRateLimitingMiddleware
 from open_targets_platform_mcp.settings import settings
@@ -136,5 +136,9 @@ def create_server() -> FastMCP:
         description=batch_query_description,
         annotations={"readOnlyHint": True},
     )
+
+    @mcp.custom_route("/health", methods=["GET"])
+    async def health_check(_: Request) -> JSONResponse:
+        return JSONResponse({"status": "healthy", "service": "mcp-server"})
 
     return mcp
