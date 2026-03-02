@@ -4,9 +4,9 @@ import base64
 from importlib import resources
 
 from fastmcp import FastMCP
+from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
 from mcp.types import Icon
 
-from open_targets_platform_mcp.middleware import AdaptiveRateLimitingMiddleware
 from open_targets_platform_mcp.settings import settings
 from open_targets_platform_mcp.tools import (
     batch_query_with_jq,
@@ -36,11 +36,9 @@ def create_server() -> FastMCP:
 
     if settings.rate_limiting_enabled:
         mcp.add_middleware(
-            AdaptiveRateLimitingMiddleware(
-                global_max_requests_per_second=3,
-                global_burst_capacity=100,
-                session_max_requests_per_second=3,
-                session_burst_capacity=6,
+            RateLimitingMiddleware(
+                settings.rate_limiting_max_requests_per_second,
+                settings.rate_limiting_burst_capacity,
             ),
         )
 

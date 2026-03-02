@@ -86,6 +86,14 @@ def root(
             show_default=True,
         ),
     ] = settings.http_port,
+    stateless_http: Annotated[
+        bool | None,
+        typer.Option(
+            "--stateless-http",
+            help="Enable stateless HTTP",
+            show_default=True,
+        ),
+    ] = settings.stateless_http,
     jq_enabled: Annotated[
         bool | None,
         typer.Option(
@@ -130,6 +138,7 @@ def root(
                 transport=settings.transport.value,
                 host=settings.http_host,
                 port=settings.http_port,
+                stateless_http=settings.stateless_http,
             )
         else:
             mcp.run(
