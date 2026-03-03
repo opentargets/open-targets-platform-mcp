@@ -7,6 +7,7 @@ from typing import Literal
 
 from graphql import GraphQLSchema, print_type
 
+from open_targets_platform_mcp.cache import CacheKey, cache
 from open_targets_platform_mcp.tools.schema.type_graph import (
     TypeGraph,
     get_cached_schema,
@@ -14,14 +15,10 @@ from open_targets_platform_mcp.tools.schema.type_graph import (
     get_type_graph,
 )
 
-# Module-level cache for category subschemas
-_cached_subschemas: "CategorySubschemas | None" = None
-
 # Error messages
-_ERR_SUBSCHEMAS_NOT_INIT = (
-    "Category subschemas not initialized. "
-    "Call prefetch_category_subschemas() at server startup."
-)
+_ERR_SUBSCHEMAS_NOT_INIT = "Category subschemas not initialized. Call prefetch_category_subschemas() at server startup."
+
+CACHE_KEY_CATEGORY_SUBSCHEMAS = CacheKey["CategorySubschemas | None"]("category_subschemas")
 
 
 @dataclass
@@ -39,7 +36,7 @@ class CategorySubschemas:
     """Collection of all category subschemas."""
 
     # category_name -> CategorySubschema
-    subschemas: dict[str, CategorySubschema] = field(default_factory=dict)
+    subschemas: dict[str, CategorySubschema] = field(default_factory=dict[str, CategorySubschema])
 
     # Depth used for expansion (for reference)
     depth: int | Literal["exhaustive"] = 1
@@ -51,11 +48,7 @@ def _load_categories() -> dict[str, dict[str, str | list[str]]]:
     Returns:
         Dict mapping category names to their metadata (description, types).
     """
-    categories_bytes = (
-        resources.files("open_targets_platform_mcp.assets")
-        .joinpath("categories.json")
-        .read_bytes()
-    )
+    categories_bytes = resources.files("open_targets_platform_mcp.assets").joinpath("categories.json").read_bytes()
     result: dict[str, dict[str, str | list[str]]] = json.loads(categories_bytes)
     return result
 
@@ -162,18 +155,6 @@ def build_category_subschemas(
     return CategorySubschemas(subschemas=subschemas, depth=depth)
 
 
-async def prefetch_category_subschemas(
-    depth: int | Literal["exhaustive"] = 1,
-) -> None:
-    """Pre-fetch and cache category subschemas at server startup.
-
-    Args:
-        depth: Expansion depth from settings
-    """
-    global _cached_subschemas  # noqa: PLW0603
-    _cached_subschemas = build_category_subschemas(depth)
-
-
 def get_category_subschemas() -> CategorySubschemas:
     """Get the cached category subschemas.
 
@@ -183,9 +164,10 @@ def get_category_subschemas() -> CategorySubschemas:
     Raises:
         RuntimeError: If subschemas were not pre-fetched at startup.
     """
-    if _cached_subschemas is None:
+    value = cache.get(CACHE_KEY_CATEGORY_SUBSCHEMAS)
+    if value is None:
         raise RuntimeError(_ERR_SUBSCHEMAS_NOT_INIT)
-    return _cached_subschemas
+    return value
 
 
 def get_categories_for_docstring() -> str:

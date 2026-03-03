@@ -6,11 +6,6 @@ import typer
 
 from open_targets_platform_mcp.create_server import create_server
 from open_targets_platform_mcp.settings import TransportType, settings
-from open_targets_platform_mcp.tools import (
-    prefetch_category_subschemas,
-    prefetch_schema,
-    prefetch_type_graph,
-)
 
 PACKAGE_NAME = "open_targets_platform_mcp"
 PACKAGE_VERSION = metadata.version(PACKAGE_NAME)
@@ -134,25 +129,9 @@ def root(
     ] = str(settings.subschema_depth),
 ) -> None:
     """Entry point of CLI."""
-    # Parse subschema_depth before updating settings
-    parsed_depth: int | str = 1
-    if subschema_depth is not None:
-        if subschema_depth == "exhaustive":
-            parsed_depth = "exhaustive"
-        else:
-            parsed_depth = int(subschema_depth)
+    settings.update(locals())
 
-    # Create a copy of locals without subschema_depth, then add parsed version
-    local_vars = {k: v for k, v in locals().items() if k != "subschema_depth"}
-    local_vars["subschema_depth"] = parsed_depth
-    settings.update(**local_vars)
-
-    # Pre-fetch the GraphQL schema, type graph, and category subschemas
-    asyncio.run(prefetch_schema())
-    asyncio.run(prefetch_type_graph())
-    asyncio.run(prefetch_category_subschemas(settings.subschema_depth))
-
-    mcp = create_server()
+    mcp = asyncio.run(create_server())
 
     try:
         if settings.transport == TransportType.HTTP:
