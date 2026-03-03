@@ -26,3 +26,6 @@ class AsyncCache(Generic[T]):
 
     def set(self, value: T) -> None:
         self._value = value
+
+    def clear(self) -> None:
+        self._value = None

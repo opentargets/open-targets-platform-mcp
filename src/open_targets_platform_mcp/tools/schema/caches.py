@@ -8,7 +8,7 @@ from open_targets_platform_mcp.tools.schema.helper.graph import TypeGraph
 from open_targets_platform_mcp.tools.schema.helper.subschema import (
     CategorySubschema,
     CategorySubschemas,
-    _build_category_subschema,
+    build_category_subschema,
 )
 
 schema_cache = AsyncCache[GraphQLSchema]()
@@ -38,7 +38,7 @@ async def category_subschemas_cache_factory() -> CategorySubschemas:
     depth = settings.subschema_depth
 
     for category_name, category_data in categories.items():
-        subschemas[category_name] = _build_category_subschema(
+        subschemas[category_name] = build_category_subschema(
             category_name,
             category_data,
             graph,

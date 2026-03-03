@@ -25,7 +25,7 @@ def _version_callback(value: bool) -> None:
 def _list_tools_callback(value: bool) -> None:
     """List all available MCP tools."""
     if value:
-        mcp = create_server()
+        mcp = asyncio.run(create_server())
         tools = asyncio.run(mcp.get_tools())
         for name, tool in tools.items():
             # Extract first line of description from the tool's description field
@@ -129,7 +129,7 @@ def root(
     ] = str(settings.subschema_depth),
 ) -> None:
     """Entry point of CLI."""
-    settings.update(locals())
+    settings.update(**locals())
 
     mcp = asyncio.run(create_server())
 

@@ -34,7 +34,7 @@ class CategorySubschemas:
     depth: int | Literal["exhaustive"] = 1
 
 
-def _build_category_subschema(
+def build_category_subschema(
     category_name: str,
     category_data: dict[str, str | list[str]],
     graph: TypeGraph,
