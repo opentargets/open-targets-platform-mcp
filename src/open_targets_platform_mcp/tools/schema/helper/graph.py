@@ -1,3 +1,9 @@
+"""GraphQL schema type graph and traversal utilities.
+
+This module provides the `TypeGraph` dataclass and functions to build and
+traverse a graph representing the dependencies between GraphQL types.
+"""
+
 from dataclasses import dataclass, field
 
 from graphql import (

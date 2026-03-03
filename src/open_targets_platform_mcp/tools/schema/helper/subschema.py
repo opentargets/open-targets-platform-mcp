@@ -1,3 +1,9 @@
+"""Category-based GraphQL subschema definitions and builders.
+
+This module provides the `CategorySubschema` models and logic to build
+filtered subschemas based on metadata defined in `categories.json`.
+"""
+
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -5,7 +11,6 @@ from graphql import GraphQLSchema
 
 from open_targets_platform_mcp.settings import settings
 from open_targets_platform_mcp.tools.schema.caches import (
-    category_subschemas_cache,
     schema_cache,
     type_graph_cache,
 )
@@ -106,6 +111,3 @@ async def build_category_subschemas() -> CategorySubschemas:
         )
 
     return CategorySubschemas(subschemas=subschemas, depth=depth)
-
-
-category_subschemas_cache.set_factory(build_category_subschemas)

@@ -1,3 +1,9 @@
+"""General utilities for GraphQL schema operations.
+
+This module provides generic helper functions such as loading category
+definitions from assets and converting schema types to SDL strings.
+"""
+
 import json
 from importlib import resources
 
