@@ -5,19 +5,26 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from graphql import build_schema
 
-from open_targets_platform_mcp.tools.schema import subschema, type_graph
+from open_targets_platform_mcp.tools.schema import schema
+from open_targets_platform_mcp.tools.schema.caches import (
+    category_subschemas_cache,
+    schema_cache,
+    type_graph_cache,
+)
+from open_targets_platform_mcp.tools.schema.helper import graph as type_graph
+from open_targets_platform_mcp.tools.schema.helper import subschema, utils
 
 
 @pytest.fixture
 def clear_cache():
     """Clear all caches before and after each test."""
-    type_graph._cached_type_graph = None
-    type_graph._cached_schema = None
-    subschema._cached_subschemas = None
+    type_graph_cache.clear()
+    schema_cache.clear()
+    category_subschemas_cache.clear()
     yield
-    type_graph._cached_type_graph = None
-    type_graph._cached_schema = None
-    subschema._cached_subschemas = None
+    type_graph_cache.clear()
+    schema_cache.clear()
+    category_subschemas_cache.clear()
 
 
 @pytest.fixture
@@ -98,21 +105,21 @@ class TestLoadCategories:
 
     def test_loads_categories(self):
         """Should load categories from JSON file."""
-        categories = subschema._load_categories()
+        categories = utils.load_categories()
         assert isinstance(categories, dict)
         # Should have at least some categories
         assert len(categories) > 0
 
     def test_category_has_description(self):
         """Each category should have a description."""
-        categories = subschema._load_categories()
+        categories = utils.load_categories()
         for name, data in categories.items():
             assert "description" in data
             assert isinstance(data["description"], str)
 
     def test_category_has_types(self):
         """Each category should have types list."""
-        categories = subschema._load_categories()
+        categories = utils.load_categories()
         for name, data in categories.items():
             assert "types" in data
             assert isinstance(data["types"], list)
@@ -125,7 +132,9 @@ class TestGetReachableTypesWithDepth:
         """Depth 0 should return only seed types."""
         graph = type_graph.build_type_graph(mock_graphql_schema)
         reachable = type_graph.get_reachable_types_with_depth(
-            graph, {"Target"}, max_depth=0
+            graph,
+            {"Target"},
+            max_depth=0,
         )
         assert reachable == {"Target"}
 
@@ -133,7 +142,9 @@ class TestGetReachableTypesWithDepth:
         """Depth 1 should include direct references only."""
         graph = type_graph.build_type_graph(mock_graphql_schema)
         reachable = type_graph.get_reachable_types_with_depth(
-            graph, {"Target"}, max_depth=1
+            graph,
+            {"Target"},
+            max_depth=1,
         )
         # Target references Disease and Pathway directly
         assert "Target" in reachable
@@ -146,7 +157,9 @@ class TestGetReachableTypesWithDepth:
         """Depth 2 should include types at depth 2."""
         graph = type_graph.build_type_graph(mock_graphql_schema)
         reachable = type_graph.get_reachable_types_with_depth(
-            graph, {"Target"}, max_depth=2
+            graph,
+            {"Target"},
+            max_depth=2,
         )
         # Target -> Disease -> Drug (depth 2)
         assert "Drug" in reachable
@@ -157,7 +170,9 @@ class TestGetReachableTypesWithDepth:
         """None depth should traverse all reachable types."""
         graph = type_graph.build_type_graph(mock_graphql_schema)
         reachable = type_graph.get_reachable_types_with_depth(
-            graph, {"Target"}, max_depth=None
+            graph,
+            {"Target"},
+            max_depth=None,
         )
         # Should find all transitively reachable types
         assert "Target" in reachable
@@ -170,7 +185,9 @@ class TestGetReachableTypesWithDepth:
         """Should handle multiple seed types correctly."""
         graph = type_graph.build_type_graph(mock_graphql_schema)
         reachable = type_graph.get_reachable_types_with_depth(
-            graph, {"Pathway", "Mechanism"}, max_depth=1
+            graph,
+            {"Pathway", "Mechanism"},
+            max_depth=1,
         )
         # Both should be included
         assert "Pathway" in reachable
@@ -183,7 +200,9 @@ class TestGetReachableTypesWithDepth:
         graph = type_graph.build_type_graph(mock_graphql_schema)
         # Target <-> Disease is a cycle
         reachable = type_graph.get_reachable_types_with_depth(
-            graph, {"Target"}, max_depth=10
+            graph,
+            {"Target"},
+            max_depth=10,
         )
         # Should not infinite loop
         assert "Target" in reachable
@@ -196,7 +215,7 @@ class TestBuildCategorySubschema:
     def test_builds_subschema_with_depth(self, mock_graphql_schema, mock_categories):
         """Should build subschema with specified depth."""
         graph = type_graph.build_type_graph(mock_graphql_schema)
-        cat_subschema = subschema._build_category_subschema(
+        cat_subschema = subschema.build_category_subschema(
             "target-info",
             mock_categories["target-info"],
             graph,
@@ -217,7 +236,7 @@ class TestBuildCategorySubschema:
     def test_builds_subschema_exhaustive(self, mock_graphql_schema, mock_categories):
         """Should build exhaustive subschema."""
         graph = type_graph.build_type_graph(mock_graphql_schema)
-        cat_subschema = subschema._build_category_subschema(
+        cat_subschema = subschema.build_category_subschema(
             "target-info",
             mock_categories["target-info"],
             graph,
@@ -239,7 +258,7 @@ class TestBuildCategorySubschema:
             "description": "Test",
             "types": ["Target", "NonExistentType"],
         }
-        cat_subschema = subschema._build_category_subschema(
+        cat_subschema = subschema.build_category_subschema(
             "test",
             cat_data,
             graph,
@@ -254,7 +273,7 @@ class TestBuildCategorySubschema:
     def test_generates_valid_sdl(self, mock_graphql_schema, mock_categories):
         """SDL should contain type definitions."""
         graph = type_graph.build_type_graph(mock_graphql_schema)
-        cat_subschema = subschema._build_category_subschema(
+        cat_subschema = subschema.build_category_subschema(
             "shared-types",
             mock_categories["shared-types"],
             graph,
@@ -272,55 +291,51 @@ class TestPrefetchCategorySubschemas:
     async def test_caches_subschemas(self, clear_cache, mock_graphql_schema):
         """Should cache subschemas after prefetch."""
         with patch(
-            "open_targets_platform_mcp.tools.schema.type_graph.fetch_graphql_schema",
+            "open_targets_platform_mcp.tools.schema.caches.fetch_graphql_schema",
             new_callable=AsyncMock,
         ) as mock_fetch:
             mock_fetch.return_value = mock_graphql_schema
 
-            await type_graph.prefetch_type_graph()
-            await subschema.prefetch_category_subschemas(depth=1)
+            # Getting the cache evaluates the factory automatically
+            result = await category_subschemas_cache.get()
 
-        assert subschema._cached_subschemas is not None
-        assert len(subschema._cached_subschemas.subschemas) > 0
+        assert result is not None
+        assert len(result.subschemas) > 0
 
     @pytest.mark.asyncio
     async def test_respects_depth_setting(self, clear_cache, mock_graphql_schema):
         """Should use provided depth setting."""
         with patch(
-            "open_targets_platform_mcp.tools.schema.type_graph.fetch_graphql_schema",
+            "open_targets_platform_mcp.tools.schema.caches.fetch_graphql_schema",
             new_callable=AsyncMock,
         ) as mock_fetch:
             mock_fetch.return_value = mock_graphql_schema
 
-            await type_graph.prefetch_type_graph()
-            await subschema.prefetch_category_subschemas(depth=0)
+            # Subschema depth is configured via settings
+            from open_targets_platform_mcp.settings import settings
 
-        assert subschema._cached_subschemas is not None
-        assert subschema._cached_subschemas.depth == 0
+            settings.subschema_depth = 0
+
+            result = await category_subschemas_cache.get()
+
+        assert result is not None
+        assert result.depth == 0
 
 
 class TestGetCategorySubschemas:
-    """Tests for get_category_subschemas function."""
+    """Tests for fetching subschemas via the async cache."""
 
     @pytest.mark.asyncio
     async def test_returns_cached_subschemas(self, clear_cache, mock_graphql_schema):
-        """Should return cached subschemas."""
-        with patch(
-            "open_targets_platform_mcp.tools.schema.type_graph.fetch_graphql_schema",
-            new_callable=AsyncMock,
-        ) as mock_fetch:
-            mock_fetch.return_value = mock_graphql_schema
+        """Should return cached subschemas on second call automatically."""
+        mock_factory = AsyncMock(return_value=mock_graphql_schema)
+        category_subschemas_cache.set_factory(mock_factory)
 
-            await type_graph.prefetch_type_graph()
-            await subschema.prefetch_category_subschemas(depth=1)
-            result = subschema.get_category_subschemas()
+        first_call = await category_subschemas_cache.get()
+        second_call = await category_subschemas_cache.get()
 
-        assert result is subschema._cached_subschemas
-
-    def test_raises_if_not_prefetched(self, clear_cache):
-        """Should raise RuntimeError if not prefetched."""
-        with pytest.raises(RuntimeError, match="not initialized"):
-            subschema.get_category_subschemas()
+        assert first_call is second_call
+        mock_factory.assert_awaited_once()
 
 
 class TestGetCategoriesForDocstring:
@@ -328,7 +343,7 @@ class TestGetCategoriesForDocstring:
 
     def test_formats_categories(self):
         """Should format categories for docstring."""
-        result = subschema.get_categories_for_docstring()
+        result = schema.get_categories_for_docstring()
 
         assert "Available categories:" in result
         # Should contain at least one category with description
@@ -347,10 +362,10 @@ class TestTypesToSdl:
                 """Field description for id"""
                 id: String!
             }
-            '''
+            ''',
         )
 
-        result = subschema._types_to_sdl({"Target"}, schema_with_desc)
+        result = utils.types_to_sdl({"Target"}, schema_with_desc, strip_descriptions=True)
 
         # Type description should be stripped
         assert "This is the Target type description" not in result
@@ -369,10 +384,10 @@ class TestTypesToSdl:
                 """Another field description"""
                 name: String
             }
-            '''
+            ''',
         )
 
-        result = subschema._types_to_sdl({"Target"}, schema_with_desc)
+        result = utils.types_to_sdl({"Target"}, schema_with_desc, strip_descriptions=False)
 
         assert "Field description for id" in result
         assert "Another field description" in result
@@ -391,10 +406,10 @@ class TestTypesToSdl:
             type Target {
                 id: String!
             }
-            '''
+            ''',
         )
 
-        result = subschema._types_to_sdl({"Query", "Target"}, schema_with_args)
+        result = utils.types_to_sdl({"Query", "Target"}, schema_with_args, strip_descriptions=False)
 
         assert "The ENSEMBL gene ID" in result
         assert "ensemblId: String!" in result
@@ -406,15 +421,23 @@ class TestTypesToSdl:
         cat_data_1 = {"description": "Test 1", "types": ["Target", "Disease"]}
         cat_data_2 = {"description": "Test 2", "types": ["Disease", "Drug"]}
 
-        subschema_1 = subschema._build_category_subschema(
-            "cat1", cat_data_1, graph, mock_graphql_schema, depth=1
+        subschema_1 = subschema.build_category_subschema(
+            "cat1",
+            cat_data_1,
+            graph,
+            mock_graphql_schema,
+            depth=1,
         )
-        subschema_2 = subschema._build_category_subschema(
-            "cat2", cat_data_2, graph, mock_graphql_schema, depth=1
+        subschema_2 = subschema.build_category_subschema(
+            "cat2",
+            cat_data_2,
+            graph,
+            mock_graphql_schema,
+            depth=1,
         )
 
         all_types = subschema_1.types | subschema_2.types
-        result = subschema._types_to_sdl(all_types, mock_graphql_schema)
+        result = utils.types_to_sdl(all_types, mock_graphql_schema, strip_descriptions=True)
 
         assert result.count("type Target {") == 1
         assert result.count("type Disease {") == 1
@@ -428,10 +451,10 @@ class TestTypesToSdl:
             type Target {
                 id: String!
             }
-            '''
+            ''',
         )
 
         original_desc = schema_with_desc.type_map["Target"].description
-        subschema._types_to_sdl({"Target"}, schema_with_desc)
+        utils.types_to_sdl({"Target"}, schema_with_desc, strip_descriptions=True)
 
         assert schema_with_desc.type_map["Target"].description == original_desc
