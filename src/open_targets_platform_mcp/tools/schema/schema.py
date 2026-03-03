@@ -3,17 +3,25 @@
 from importlib import resources
 from typing import Annotated
 
+from graphql import print_schema
 from pydantic import Field
 
-from open_targets_platform_mcp.cache import CacheKey, cache
+from open_targets_platform_mcp.cache import AsyncCache
+from open_targets_platform_mcp.client.graphql import fetch_graphql_schema
 from open_targets_platform_mcp.tools.schema.subschema import (
+    category_subschemas_cache,
     get_categories_for_docstring,
-    get_category_subschemas,
+    schema_cache,
     types_to_sdl,
 )
-from open_targets_platform_mcp.tools.schema.type_graph import get_cached_schema
 
-CACHE_KEY_SERIALISED_SCHEMA = CacheKey[str | None]("serialised_schema")
+
+async def _serialised_schema_cache_factory() -> str:
+    schema = await fetch_graphql_schema()
+    return print_schema(schema)
+
+
+serialised_schema_cache = AsyncCache[str](_serialised_schema_cache_factory)
 
 
 async def get_open_targets_graphql_schema(
@@ -26,12 +34,8 @@ async def get_open_targets_graphql_schema(
     ],
 ) -> str:
     """Retrieve the Open Targets Platform GraphQL schema by category."""
-    if cache.get(CACHE_KEY_SERIALISED_SCHEMA) is None:
-        msg = "Schema not initialized. Call prefetch_schema() at server startup."
-        raise RuntimeError(msg)
-
     # Get subschemas for requested categories
-    subschemas = get_category_subschemas()
+    subschemas = await category_subschemas_cache.get()
     available_categories = sorted(subschemas.subschemas.keys())
 
     # Validate category names
@@ -49,7 +53,7 @@ async def get_open_targets_graphql_schema(
         all_types.update(subschemas.subschemas[category_name].types)
 
     # Generate combined SDL
-    schema_obj = get_cached_schema()
+    schema_obj = await schema_cache.get()
     sdl = types_to_sdl(all_types, schema_obj)
 
     # Append common mistakes guide

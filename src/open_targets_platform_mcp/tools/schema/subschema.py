@@ -7,18 +7,19 @@ from typing import Literal
 
 from graphql import GraphQLSchema, print_type
 
-from open_targets_platform_mcp.cache import CacheKey, cache
+from open_targets_platform_mcp.cache import AsyncCache
+from open_targets_platform_mcp.settings import settings
 from open_targets_platform_mcp.tools.schema.type_graph import (
     TypeGraph,
-    get_cached_schema,
     get_reachable_types_with_depth,
-    get_type_graph,
+    schema_cache,
+    type_graph_cache,
 )
 
 # Error messages
 _ERR_SUBSCHEMAS_NOT_INIT = "Category subschemas not initialized. Call prefetch_category_subschemas() at server startup."
 
-CACHE_KEY_CATEGORY_SUBSCHEMAS = CacheKey["CategorySubschemas | None"]("category_subschemas")
+category_subschemas_cache = AsyncCache["CategorySubschemas"]()
 
 
 @dataclass
@@ -126,9 +127,7 @@ def _build_category_subschema(
     )
 
 
-def build_category_subschemas(
-    depth: int | Literal["exhaustive"] = 1,
-) -> CategorySubschemas:
+async def build_category_subschemas() -> CategorySubschemas:
     """Build subschemas for all categories.
 
     Args:
@@ -137,11 +136,13 @@ def build_category_subschemas(
     Returns:
         CategorySubschemas containing all category subschemas
     """
-    graph = get_type_graph()
-    schema = get_cached_schema()
+    graph = await type_graph_cache.get()
+    schema = await schema_cache.get()
     categories = _load_categories()
 
     subschemas: dict[str, CategorySubschema] = {}
+
+    depth = settings.subschema_depth
 
     for category_name, category_data in categories.items():
         subschemas[category_name] = _build_category_subschema(
@@ -153,21 +154,6 @@ def build_category_subschemas(
         )
 
     return CategorySubschemas(subschemas=subschemas, depth=depth)
-
-
-def get_category_subschemas() -> CategorySubschemas:
-    """Get the cached category subschemas.
-
-    Returns:
-        CategorySubschemas: The pre-fetched category subschemas.
-
-    Raises:
-        RuntimeError: If subschemas were not pre-fetched at startup.
-    """
-    value = cache.get(CACHE_KEY_CATEGORY_SUBSCHEMAS)
-    if value is None:
-        raise RuntimeError(_ERR_SUBSCHEMAS_NOT_INIT)
-    return value
 
 
 def get_categories_for_docstring() -> str:
@@ -187,3 +173,6 @@ def get_categories_for_docstring() -> str:
             lines.append(f"  - {name}")
 
     return "\n".join(lines)
+
+
+category_subschemas_cache.set_factory(build_category_subschemas)

@@ -15,7 +15,8 @@ from graphql import (
 )
 from pydantic import Field
 
-from open_targets_platform_mcp.cache import CacheKey, cache
+from open_targets_platform_mcp.cache import AsyncCache
+from open_targets_platform_mcp.client.graphql import fetch_graphql_schema
 
 # Built-in scalar types to filter out
 _BUILTIN_SCALARS = {"String", "Int", "Float", "Boolean", "ID"}
@@ -25,8 +26,8 @@ _ERR_TYPE_GRAPH_NOT_INIT = "Type graph not initialized. Call prefetch_type_graph
 _ERR_SCHEMA_NOT_INIT = "Schema not initialized. Call prefetch_type_graph() at server startup."
 
 
-CACHE_KEY_SCHEMA = CacheKey[GraphQLSchema | None]("schema")
-CACHE_KEY_TYPE_GRAPH = CacheKey["TypeGraph | None"]("type_graph")
+schema_cache = AsyncCache[GraphQLSchema]()
+type_graph_cache = AsyncCache["TypeGraph"]()
 
 
 @dataclass
@@ -150,36 +151,6 @@ def build_type_graph(schema: GraphQLSchema) -> TypeGraph:
     return graph
 
 
-def get_type_graph() -> TypeGraph:
-    """Get the cached type graph.
-
-    Returns:
-        TypeGraph: The pre-fetched type relationship graph.
-
-    Raises:
-        RuntimeError: If type graph was not pre-fetched at startup.
-    """
-    value = cache.get(CACHE_KEY_TYPE_GRAPH)
-    if value is None:
-        raise RuntimeError(_ERR_TYPE_GRAPH_NOT_INIT)
-    return value
-
-
-def get_cached_schema() -> GraphQLSchema:
-    """Get the cached GraphQL schema object.
-
-    Returns:
-        The pre-fetched GraphQL schema.
-
-    Raises:
-        RuntimeError: If schema was not pre-fetched at startup.
-    """
-    value = cache.get(CACHE_KEY_SCHEMA)
-    if value is None:
-        raise RuntimeError(_ERR_SCHEMA_NOT_INIT)
-    return value
-
-
 def _get_reachable_types(graph: TypeGraph, start_type: str) -> set[str]:
     """BFS traversal to find all reachable types exhaustively.
 
@@ -295,7 +266,7 @@ async def get_type_dependencies(
     Raises:
         ValueError: If any type_name is not found in the schema
     """
-    graph = get_type_graph()
+    graph = await type_graph_cache.get()
     available_types = sorted(graph.types.keys())
 
     # Validate all type names first
@@ -303,9 +274,6 @@ async def get_type_dependencies(
     if invalid_types:
         msg = _build_type_not_found_message(invalid_types[0], available_types)
         raise ValueError(msg)
-
-    if cache.get(CACHE_KEY_SCHEMA) is None:
-        raise RuntimeError(_ERR_SCHEMA_NOT_INIT)
 
     # Get reachable types for each input type
     reachable_by_type: dict[str, set[str]] = {}
@@ -331,14 +299,22 @@ async def get_type_dependencies(
     for type_name in type_names:
         specific_types = reachable_by_type[type_name] - shared_types
         if specific_types:
-            result[type_name] = _types_to_sdl(specific_types, cache.get(CACHE_KEY_SCHEMA))
+            result[type_name] = _types_to_sdl(specific_types, await schema_cache.get())
         else:
             result[type_name] = ""
 
     # Add shared dependencies
     if shared_types:
-        result["shared"] = _types_to_sdl(shared_types, cache.get(CACHE_KEY_SCHEMA))
+        result["shared"] = _types_to_sdl(shared_types, await schema_cache.get())
     else:
         result["shared"] = ""
 
     return result
+
+
+async def type_graph_cache_factory():
+    return build_type_graph(await schema_cache.get())
+
+
+schema_cache.set_factory(fetch_graphql_schema)
+type_graph_cache.set_factory(type_graph_cache_factory)

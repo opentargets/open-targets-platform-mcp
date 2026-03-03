@@ -4,11 +4,8 @@ import base64
 from importlib import resources
 
 from fastmcp import FastMCP
-from graphql import print_schema
 from mcp.types import Icon
 
-from open_targets_platform_mcp.cache import cache
-from open_targets_platform_mcp.client.graphql import fetch_graphql_schema
 from open_targets_platform_mcp.middleware import AdaptiveRateLimitingMiddleware
 from open_targets_platform_mcp.settings import settings
 from open_targets_platform_mcp.tools import (
@@ -20,18 +17,6 @@ from open_targets_platform_mcp.tools import (
     query_without_jq,
     search_entities,
 )
-from open_targets_platform_mcp.tools.schema.schema import CACHE_KEY_SERIALISED_SCHEMA
-from open_targets_platform_mcp.tools.schema.subschema import CACHE_KEY_CATEGORY_SUBSCHEMAS, build_category_subschemas
-from open_targets_platform_mcp.tools.schema.type_graph import CACHE_KEY_SCHEMA, CACHE_KEY_TYPE_GRAPH, build_type_graph
-
-
-async def prepare_cache() -> None:
-    """Pre-fetch the GraphQL schema, type graph, and category subschemas."""
-    schema = await fetch_graphql_schema()
-    cache.set(CACHE_KEY_SCHEMA, schema)
-    cache.set(CACHE_KEY_SERIALISED_SCHEMA, print_schema(schema))
-    cache.set(CACHE_KEY_TYPE_GRAPH, build_type_graph(schema))
-    cache.set(CACHE_KEY_CATEGORY_SUBSCHEMAS, build_category_subschemas(settings.subschema_depth))
 
 
 async def create_server() -> FastMCP:
@@ -44,8 +29,6 @@ async def create_server() -> FastMCP:
     """
     favicon_bytes = resources.files("open_targets_platform_mcp.static").joinpath("favicon.png").read_bytes()
     data_uri = f"data:image/png;base64,{base64.b64encode(favicon_bytes).decode('utf-8')}"
-
-    await prepare_cache()
 
     mcp = FastMCP(
         name=settings.server_name,
