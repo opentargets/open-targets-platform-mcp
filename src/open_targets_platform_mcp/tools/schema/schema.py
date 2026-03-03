@@ -69,32 +69,19 @@ def get_categories_for_docstring() -> str:
     return "\n".join(lines)
 
 
-# Dynamically set the docstring with the categories list
-get_open_targets_graphql_schema.__doc__ = f"""\
-Retrieve the Open Targets Platform GraphQL schema filtered by category.
+def build_schema_docstring() -> str:
+    """Build the complete docstring for the schema tool.
 
-You MUST specify one or more categories to retrieve the relevant schema subset.
-Categories group related GraphQL types into coherent subschemas
-(e.g., 'drug-mechanisms', 'genetic-associations', 'target-safety').
+    Reads the base docstring from schema_docstring.txt and appends
+    the dynamically generated categories list.
+    """
+    base_docstring = (
+        resources.files("open_targets_platform_mcp.tools.schema")
+        .joinpath("schema_docstring_prefix.txt")
+        .read_text(encoding="utf-8")
+    )
+    categories = get_categories_for_docstring()
+    return f"{base_docstring}\n{categories}\n"
 
-The returned schema includes types from the specified categories plus
-their dependencies expanded..
 
-Args:
-    categories: List of category names to filter the schema. At least
-        one category must be specified.
-
-Returns:
-    str: the schema text in SDL (Schema Definition Language) format.
-
-Raises:
-    RuntimeError: If schema was not pre-fetched at startup.
-    ValueError: If an invalid category name is provided.
-
-Examples:
-    - get_open_targets_graphql_schema(["drug-mechanisms"]) -> drug types
-    - get_open_targets_graphql_schema(["target-safety", "drug-safety"])
-        -> combined safety-related types
-
-{get_categories_for_docstring()}
-"""
+get_open_targets_graphql_schema.__doc__ = build_schema_docstring()

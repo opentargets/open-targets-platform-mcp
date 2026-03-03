@@ -9,13 +9,8 @@ from typing import Literal
 
 from graphql import GraphQLSchema
 
-from open_targets_platform_mcp.settings import settings
-from open_targets_platform_mcp.tools.schema.caches import (
-    schema_cache,
-    type_graph_cache,
-)
 from open_targets_platform_mcp.tools.schema.helper.graph import TypeGraph, get_reachable_types_with_depth
-from open_targets_platform_mcp.tools.schema.helper.utils import load_categories, types_to_sdl
+from open_targets_platform_mcp.tools.schema.helper.utils import types_to_sdl
 
 
 @dataclass
@@ -85,29 +80,3 @@ def _build_category_subschema(
         types=expanded_types,
         sdl=sdl,
     )
-
-
-async def build_category_subschemas() -> CategorySubschemas:
-    """Build subschemas for all categories.
-
-    Returns:
-        CategorySubschemas containing all category subschemas
-    """
-    graph = await type_graph_cache.get()
-    schema = await schema_cache.get()
-    categories = load_categories()
-
-    subschemas: dict[str, CategorySubschema] = {}
-
-    depth = settings.subschema_depth
-
-    for category_name, category_data in categories.items():
-        subschemas[category_name] = _build_category_subschema(
-            category_name,
-            category_data,
-            graph,
-            schema,
-            depth,
-        )
-
-    return CategorySubschemas(subschemas=subschemas, depth=depth)
