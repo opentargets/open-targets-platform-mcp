@@ -1,25 +1,16 @@
-"""Category-based subschemas for the OpenTargets GraphQL schema."""
-
-import json
 from dataclasses import dataclass, field
-from importlib import resources
 from typing import Literal
 
-from graphql import GraphQLSchema, print_type
+from graphql import GraphQLSchema
 
-from open_targets_platform_mcp.cache import AsyncCache
 from open_targets_platform_mcp.settings import settings
-from open_targets_platform_mcp.tools.schema.type_graph import (
-    TypeGraph,
-    get_reachable_types_with_depth,
+from open_targets_platform_mcp.tools.schema.caches import (
+    category_subschemas_cache,
     schema_cache,
     type_graph_cache,
 )
-
-# Error messages
-_ERR_SUBSCHEMAS_NOT_INIT = "Category subschemas not initialized. Call prefetch_category_subschemas() at server startup."
-
-category_subschemas_cache = AsyncCache["CategorySubschemas"]()
+from open_targets_platform_mcp.tools.schema.helper.graph import TypeGraph, get_reachable_types_with_depth
+from open_targets_platform_mcp.tools.schema.helper.utils import load_categories, types_to_sdl
 
 
 @dataclass
@@ -41,42 +32,6 @@ class CategorySubschemas:
 
     # Depth used for expansion (for reference)
     depth: int | Literal["exhaustive"] = 1
-
-
-def _load_categories() -> dict[str, dict[str, str | list[str]]]:
-    """Load categories from the assets JSON file.
-
-    Returns:
-        Dict mapping category names to their metadata (description, types).
-    """
-    categories_bytes = resources.files("open_targets_platform_mcp.assets").joinpath("categories.json").read_bytes()
-    result: dict[str, dict[str, str | list[str]]] = json.loads(categories_bytes)
-    return result
-
-
-def types_to_sdl(type_names: set[str], schema: GraphQLSchema) -> str:
-    """Convert a set of type names to SDL string.
-
-    Strips type-level descriptions, preserves field/argument descriptions.
-    """
-    sdl_parts: list[str] = []
-    for type_name in sorted(type_names):
-        graphql_type = schema.type_map.get(type_name)
-        if not graphql_type:
-            continue
-
-        # Store and clear type-level description only
-        original_type_desc = getattr(graphql_type, "description", None)
-        if hasattr(graphql_type, "description"):
-            graphql_type.description = None  # type: ignore[union-attr]
-
-        sdl_parts.append(print_type(graphql_type))
-
-        # Restore type description
-        if hasattr(graphql_type, "description"):
-            graphql_type.description = original_type_desc  # type: ignore[union-attr]
-
-    return "\n\n".join(sdl_parts)
 
 
 def _build_category_subschema(
@@ -112,7 +67,7 @@ def _build_category_subschema(
     expanded_types = get_reachable_types_with_depth(graph, valid_seed_types, max_depth)
 
     # Convert to SDL
-    sdl = types_to_sdl(expanded_types, schema)
+    sdl = types_to_sdl(expanded_types, schema, strip_descriptions=True)
 
     # Get description (guaranteed to be a string)
     description = category_data.get("description", "")
@@ -130,15 +85,12 @@ def _build_category_subschema(
 async def build_category_subschemas() -> CategorySubschemas:
     """Build subschemas for all categories.
 
-    Args:
-        depth: Expansion depth (int or "exhaustive")
-
     Returns:
         CategorySubschemas containing all category subschemas
     """
     graph = await type_graph_cache.get()
     schema = await schema_cache.get()
-    categories = _load_categories()
+    categories = load_categories()
 
     subschemas: dict[str, CategorySubschema] = {}
 
@@ -154,25 +106,6 @@ async def build_category_subschemas() -> CategorySubschemas:
         )
 
     return CategorySubschemas(subschemas=subschemas, depth=depth)
-
-
-def get_categories_for_docstring() -> str:
-    """Format categories for inclusion in tool docstring.
-
-    Returns:
-        Formatted string listing all categories with descriptions.
-    """
-    categories = _load_categories()
-
-    lines = ["Available categories:"]
-    for name, data in sorted(categories.items()):
-        description = data.get("description", "")
-        if isinstance(description, str):
-            lines.append(f"  - {name}: {description}")
-        else:
-            lines.append(f"  - {name}")
-
-    return "\n".join(lines)
 
 
 category_subschemas_cache.set_factory(build_category_subschemas)

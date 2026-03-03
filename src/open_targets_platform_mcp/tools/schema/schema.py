@@ -3,25 +3,10 @@
 from importlib import resources
 from typing import Annotated
 
-from graphql import print_schema
 from pydantic import Field
 
-from open_targets_platform_mcp.cache import AsyncCache
-from open_targets_platform_mcp.client.graphql import fetch_graphql_schema
-from open_targets_platform_mcp.tools.schema.subschema import (
-    category_subschemas_cache,
-    get_categories_for_docstring,
-    schema_cache,
-    types_to_sdl,
-)
-
-
-async def _serialised_schema_cache_factory() -> str:
-    schema = await fetch_graphql_schema()
-    return print_schema(schema)
-
-
-serialised_schema_cache = AsyncCache[str](_serialised_schema_cache_factory)
+from open_targets_platform_mcp.tools.schema.caches import category_subschemas_cache, schema_cache
+from open_targets_platform_mcp.tools.schema.helper import load_categories, types_to_sdl
 
 
 async def get_open_targets_graphql_schema(
@@ -54,7 +39,7 @@ async def get_open_targets_graphql_schema(
 
     # Generate combined SDL
     schema_obj = await schema_cache.get()
-    sdl = types_to_sdl(all_types, schema_obj)
+    sdl = types_to_sdl(all_types, schema_obj, strip_descriptions=True)
 
     # Append common mistakes guide
     common_mistakes_guide = (
@@ -63,6 +48,25 @@ async def get_open_targets_graphql_schema(
         .read_text(encoding="utf-8")
     )
     return sdl + "\n" + common_mistakes_guide
+
+
+def get_categories_for_docstring() -> str:
+    """Format categories for inclusion in tool docstring.
+
+    Returns:
+        Formatted string listing all categories with descriptions.
+    """
+    categories = load_categories()
+
+    lines = ["Available categories:"]
+    for name, data in sorted(categories.items()):
+        description = data.get("description", "")
+        if isinstance(description, str):
+            lines.append(f"  - {name}: {description}")
+        else:
+            lines.append(f"  - {name}")
+
+    return "\n".join(lines)
 
 
 # Dynamically set the docstring with the categories list
