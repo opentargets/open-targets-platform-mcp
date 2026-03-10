@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Targets Platform MCP Server</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #2e2e2e;
+            background: #ffffff;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: #ffffff;
+            color: #2e2e2e;
+            padding: 2rem 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-bottom: 3px solid #3489ca;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-logo {
+            width: 50px;
+            height: 50px;
+            flex-shrink: 0;
+        }
+
+        .header-text {
+            flex: 1;
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 400;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1rem;
+            color: #666;
+            font-weight: 300;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 1rem;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .section h2 {
+            color: #2e2e2e;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 0.75rem;
+        }
+
+        .section p {
+            color: #555;
+            margin-bottom: 1rem;
+            line-height: 1.7;
+        }
+
+        .section a {
+            color: #3489ca;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-bottom-color 0.2s;
+        }
+
+        .section a:hover {
+            border-bottom-color: #3489ca;
+        }
+
+        .info-box {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-left: 3px solid #3489ca;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            border-radius: 4px;
+        }
+
+        .info-box p {
+            margin: 0.5rem 0;
+            color: #555;
+        }
+
+        .info-box code {
+            background: #ffffff;
+            padding: 0.3rem 0.6rem;
+            border-radius: 3px;
+            border: 1px solid #e0e0e0;
+            font-family: 'Monaco', 'Courier New', monospace;
+            color: #2e2e2e;
+            font-size: 0.9em;
+        }
+
+        .copy-button {
+            background: #3489ca;
+            color: white;
+            border: none;
+            padding: 0.3rem 0.75rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-left: 0.5rem;
+            transition: background 0.2s;
+        }
+
+        .copy-button:hover {
+            background: #2a6fa3;
+        }
+
+        .copy-button:active {
+            background: #1e5278;
+        }
+
+        .endpoint-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .endpoint-row:last-of-type {
+            margin-bottom: 0.75rem;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 1rem;
+        }
+
+        .references-list li {
+            margin-bottom: 0.75rem;
+        }
+
+        .references-list a {
+            color: #3489ca;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-bottom-color 0.2s;
+        }
+
+        .references-list a:hover {
+            border-bottom-color: #3489ca;
+        }
+
+        .tools-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .tools-table thead {
+            background: #f9f9f9;
+            color: #2e2e2e;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tools-table th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .tools-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #e0e0e0;
+            color: #555;
+        }
+
+        .tools-table tbody tr:hover {
+            background: #f9f9f9;
+        }
+
+        .tools-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .tool-name {
+            color: #3489ca;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .link-card {
+            display: block;
+            padding: 1.5rem;
+            border: 2px solid #3489ca;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .link-card:hover {
+            background: #f0f7fc;
+            box-shadow: 0 2px 8px rgba(52, 137, 202, 0.2);
+        }
+
+        .link-card h3 {
+            color: #3489ca;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .link-card p {
+            color: #666;
+            font-size: 0.95rem;
+            margin: 0;
+        }
+
+        .footer {
+            background: #f5f5f5;
+            padding: 2rem 1rem;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
+            margin-top: 4rem;
+        }
+
+        .footer a {
+            color: #3489ca;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .container {
+                padding: 2rem 1rem;
+            }
+
+            .links,
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <img src="{{ logo_url }}" alt="Open Targets Logo" class="header-logo">
+            <div class="header-text">
+                <h1>Open Targets Platform MCP Server</h1>
+                <p>Model Context Protocol server for target-disease associations and drug discovery data</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="section">
+            <p>
+                This is the official Open Targets Platform MCP (Model Context Protocol) server implementation.
+                It enables AI assistants to interact with the <a href="https://platform.opentargets.org/" target="_blank">Open Targets Platform</a>.
+            </p>
+        </div>
+
+        <div class="info-box">
+            <div class="endpoint-row">
+                <p style="margin: 0;"><strong>MCP Endpoint:</strong> <code id="mcp-endpoint">{{ mcp_url }}</code></p>
+                <button class="copy-button" onclick="copyEndpoint()">Copy</button>
+            </div>
+            <p style="margin: 0;"><strong>Version:</strong> {{ version }}</p>
+        </div>
+
+        <div class="section">
+            <h2>Tools</h2>
+            <table class="tools-table">
+                <thead>
+                    <tr>
+                        <th>Tool Name</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{ tools }}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>References</h2>
+            <ul class="references-list">
+                <li><a href="https://github.com/opentargets/open-targets-platform-mcp" target="_blank">GitHub Repository</a></li>
+                <li><a href="https://platform-docs.opentargets.org" target="_blank">Platform Documentation</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>
+            Open Targets Platform MCP Server |
+            <a href="https://www.opentargets.org" target="_blank">Open Targets</a> |
+            <a href="https://github.com/opentargets/open-targets-platform-mcp/blob/main/LICENSE" target="_blank">License</a>
+        </p>
+    </div>
+
+    <script>
+        function copyEndpoint() {
+            const endpointText = document.getElementById('mcp-endpoint').textContent;
+            navigator.clipboard.writeText(endpointText).then(() => {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+    </script>
+</body>
+</html>
