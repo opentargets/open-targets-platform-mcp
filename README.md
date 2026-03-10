@@ -28,7 +28,6 @@ This package is the official Open Targets Platform MCP server implementation tha
 ## Features
 
 - 🔍 **Category-Based Schema Access**: Fetch and explore focused subsets of the Open Targets Platform GraphQL schema using category-based subschemas
-- 🧭 **Type Graph Exploration**: Analyze and explore schema type relationships recursively with the `get_type_dependencies` tool
 - 🚀 **Pre-fetched Schema Optimization**: The GraphQL schema is pre-fetched and cached at server startup to ensure immediate availability for tools
 - 📊 **Query Execution**: Execute custom GraphQL queries against the Open Targets Platform API
 - ⚡ **Batch Query Processing**: Execute the same query multiple times with different parameters efficiently
