@@ -1,6 +1,6 @@
 [project]
 name = "open-targets-platform-mcp"
-version = "0.0.1"
+version = "0.0.2"
 description = "Official implementation of Model Context Protocol for Open Targets Platform"
 authors = [
     { name = "Francesco Carli", email = "carli@ebi.ac.uk" },
