@@ -88,6 +88,10 @@ def create_server() -> FastMCP:
         html_content = html_content.replace("{{ mcp_url }}", mcp_url)
         return HTMLResponse(content=html_content)
 
+    @mcp.custom_route("/health", methods=["GET"])
+    async def health_check(_: Request) -> JSONResponse:
+        return JSONResponse({"status": "healthy", "service": "mcp-server"})
+
     mcp.tool(get_open_targets_graphql_schema, annotations={"readOnlyHint": True})
     mcp.tool(
         search_entities,
@@ -136,9 +140,5 @@ def create_server() -> FastMCP:
         description=batch_query_description,
         annotations={"readOnlyHint": True},
     )
-
-    @mcp.custom_route("/health", methods=["GET"])
-    async def health_check(_: Request) -> JSONResponse:
-        return JSONResponse({"status": "healthy", "service": "mcp-server"})
 
     return mcp
