@@ -19,7 +19,7 @@ from open_targets_platform_mcp.tools import (
 )
 
 
-def create_server() -> FastMCP:
+async def create_server() -> FastMCP:
     """Set up the MCP server and register all tools.
 
     This function registers tools based on current configuration.
@@ -29,6 +29,7 @@ def create_server() -> FastMCP:
     """
     favicon_bytes = resources.files("open_targets_platform_mcp.static").joinpath("favicon.png").read_bytes()
     data_uri = f"data:image/png;base64,{base64.b64encode(favicon_bytes).decode('utf-8')}"
+
     mcp = FastMCP(
         name=settings.server_name,
         icons=[Icon(src=data_uri, mimeType="image/png")],
