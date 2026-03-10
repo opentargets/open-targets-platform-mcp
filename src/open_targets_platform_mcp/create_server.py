@@ -50,7 +50,7 @@ async def create_server() -> FastMCP:
 
     # Register custom HTTP routes
     @mcp.custom_route("/", methods=["GET"])
-    async def homepage(request: Request) -> HTMLResponse:
+    async def homepage(request: Request) -> HTMLResponse:  # pyright: ignore[reportUnusedFunction]
         """Serve the homepage for the MCP server."""
         template_content = (
             resources.files("open_targets_platform_mcp.templates").joinpath("homepage.html").read_text(encoding="utf-8")
@@ -90,8 +90,8 @@ async def create_server() -> FastMCP:
         html_content = html_content.replace("{{ mcp_url }}", mcp_url)
         return HTMLResponse(content=html_content)
 
-    mcp.tool(get_open_targets_graphql_schema)
-    mcp.tool(get_type_dependencies)
+    mcp.tool(get_open_targets_graphql_schema, annotations={"readOnlyHint": True})
+    mcp.tool(get_type_dependencies, annotations={"readOnlyHint": True})
     mcp.tool(
         search_entities,
         description=resources.files("open_targets_platform_mcp.tools.search_entities")
