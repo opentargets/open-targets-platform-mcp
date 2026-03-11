@@ -21,11 +21,10 @@ class Settings(BaseSettings):
     transport: TransportType = TransportType.HTTP
     http_host: str = "localhost"
     http_port: int = 8000
+    stateless_http: bool = True
     rate_limiting_enabled: bool = False
-    rate_limiting_global_max_requests_per_second: float = 3
-    rate_limiting_global_burst_capacity: int = 100
-    rate_limiting_session_max_requests_per_second: float = 3
-    rate_limiting_session_burst_capacity: int = 6
+    rate_limiting_max_requests_per_second: float = 3
+    rate_limiting_burst_capacity: int = 100
     jq_enabled: bool = False
 
     def update(self, **kwargs: Any) -> None:

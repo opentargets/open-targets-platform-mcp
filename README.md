@@ -138,9 +138,12 @@ Configure the server using environment variables (all prefixed with `OTP_MCP_`).
 | `OTP_MCP_TRANSPORT` | `--transport` | Transport type: `stdio` or `http` | `http` |
 | `OTP_MCP_HTTP_HOST` | `--host` | HTTP server host (only used with `http` transport) | `localhost` |
 | `OTP_MCP_HTTP_PORT` | `--port` | HTTP server port (only used with `http` transport) | `8000` |
+| `OTP_MCP_STATELESS_HTTP` | `--stateless-http` | Enable stateless HTTP mode (only used with `http` transport) | `true` |
 | `OTP_MCP_API_CALL_TIMEOUT` | `--timeout` | Request timeout in seconds for API calls | `30` |
 | `OTP_MCP_JQ_ENABLED` | `--jq` | Enable jq filtering support | `false` |
 | `OTP_MCP_RATE_LIMITING_ENABLED` | `--rate-limiting` | Enable rate limiting | `false` |
+| `OTP_MCP_RATE_LIMITING_MAX_REQUESTS_PER_SECOND` | _(env only)_ | Maximum requests per second when rate limiting is enabled | `3` |
+| `OTP_MCP_RATE_LIMITING_BURST_CAPACITY` | _(env only)_ | Maximum burst capacity when rate limiting is enabled | `100` |
 
 **Examples:**
 
@@ -244,8 +247,6 @@ open-targets-platform-mcp/
 │   │   └── graphql.py       # GraphQL client implementation
 │   ├── model/               # Data models
 │   │   └── result.py        # Query result models
-│   ├── middleware/          # Middleware components
-│   │   └── AdaptiveRateLimitingMiddleware.py  # Rate limiting middleware
 │   ├── tools/               # MCP tools (organized by feature)
 │   │   ├── __init__.py      # Tool exports
 │   │   ├── schema/          # Schema fetching tool
