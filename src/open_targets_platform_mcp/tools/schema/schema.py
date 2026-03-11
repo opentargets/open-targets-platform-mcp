@@ -1,47 +1,87 @@
 """Tool for fetching the Open Targets Platform GraphQL schema."""
 
-import asyncio
-import time
-from typing import Any
+from importlib import resources
+from typing import Annotated
 
-from graphql import print_schema
+from pydantic import Field
 
-from open_targets_platform_mcp.client.graphql import fetch_graphql_schema
-
-# Cache TTL: 1 hour in seconds
-_SCHEMA_CACHE_TTL = 3600
-
-# Module-level cache for schema
-_cache: dict[str, Any] = {}
-_cache_lock = asyncio.Lock()
+from open_targets_platform_mcp.tools.schema.caches import category_subschemas_cache, schema_cache
+from open_targets_platform_mcp.tools.schema.helper import load_categories, types_to_sdl
 
 
-async def get_open_targets_graphql_schema() -> str:
-    """Retrieve the Open Targets Platform GraphQL schema.
+async def get_open_targets_graphql_schema(
+    categories: Annotated[
+        list[str],
+        Field(
+            description="List of category names to filter the schema. "
+            "Returns only types relevant to the specified categories.",
+        ),
+    ],
+) -> str:
+    """Retrieve the Open Targets Platform GraphQL schema by category."""
+    # Get subschemas for requested categories
+    subschemas = await category_subschemas_cache.get()
+    available_categories = sorted(subschemas.subschemas.keys())
 
-    Fetches the latest schema dynamically from the API using
-    the gql client's built-in schema fetching. Results are cached
-    for 1 hour to reduce API calls.
+    # Validate category names
+    invalid_categories = [c for c in categories if c not in subschemas.subschemas]
+    if invalid_categories:
+        msg = (
+            f"Invalid category name(s): {', '.join(invalid_categories)}. "
+            f"Available categories: {', '.join(available_categories)}"
+        )
+        raise ValueError(msg)
+
+    # Collect all types from requested categories
+    all_types: set[str] = set()
+    for category_name in categories:
+        all_types.update(subschemas.subschemas[category_name].types)
+
+    # Generate combined SDL
+    schema_obj = await schema_cache.get()
+    sdl = types_to_sdl(all_types, schema_obj, strip_descriptions=True)
+
+    # Append common mistakes guide
+    common_mistakes_guide = (
+        resources.files("open_targets_platform_mcp.tools.schema")
+        .joinpath("common_mistakes_guide.txt")
+        .read_text(encoding="utf-8")
+    )
+    return sdl + "\n" + common_mistakes_guide
+
+
+def get_categories_for_docstring() -> str:
+    """Format categories for inclusion in tool docstring.
 
     Returns:
-        str: the schema text in SDL (Schema Definition Language) format.
+        Formatted string listing all categories with descriptions.
     """
-    current_time = time.time()
+    categories = load_categories()
 
-    # Check cache with lock to prevent concurrent fetches
-    async with _cache_lock:
-        # Check if we have a valid cached schema
-        if "schema" in _cache and "timestamp" in _cache and (current_time - _cache["timestamp"]) < _SCHEMA_CACHE_TTL:
-            return _cache["schema"]
+    lines = ["Available categories:"]
+    for name, data in sorted(categories.items()):
+        description = data.get("description", "")
+        if isinstance(description, str):
+            lines.append(f"  - {name}: {description}")
+        else:
+            lines.append(f"  - {name}")
 
-        # Cache miss or expired - fetch new schema
-        schema_obj = await fetch_graphql_schema()
+    return "\n".join(lines)
 
-        # Convert to SDL string format
-        schema_sdl = print_schema(schema_obj)
 
-        # Update cache with string
-        _cache["schema"] = schema_sdl
-        _cache["timestamp"] = current_time
+def build_schema_docstring() -> str:
+    """Build the complete docstring for the schema tool.
 
-        return schema_sdl
+    Reads the base docstring from schema_docstring.txt and appends
+    the dynamically generated categories list.
+    """
+    base_docstring = (
+        resources.files("open_targets_platform_mcp.tools.schema")
+        .joinpath("schema_docstring_prefix.txt")
+        .read_text(encoding="utf-8")
+    )
+    categories = get_categories_for_docstring()
+    return f"{base_docstring}\n{categories}\n"
+
+
+get_open_targets_graphql_schema.__doc__ = build_schema_docstring()

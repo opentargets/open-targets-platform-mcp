@@ -14,13 +14,14 @@ from open_targets_platform_mcp.tools import (
     batch_query_with_jq,
     batch_query_without_jq,
     get_open_targets_graphql_schema,
+    get_type_dependencies,
     query_with_jq,
     query_without_jq,
     search_entities,
 )
 
 
-def create_server() -> FastMCP:
+async def create_server() -> FastMCP:
     """Set up the MCP server and register all tools.
 
     This function registers tools based on current configuration.
@@ -30,6 +31,7 @@ def create_server() -> FastMCP:
     """
     favicon_bytes = resources.files("open_targets_platform_mcp.static").joinpath("favicon.png").read_bytes()
     data_uri = f"data:image/png;base64,{base64.b64encode(favicon_bytes).decode('utf-8')}"
+
     mcp = FastMCP(
         name=settings.server_name,
         icons=[Icon(src=data_uri, mimeType="image/png")],
@@ -46,7 +48,7 @@ def create_server() -> FastMCP:
 
     # Register custom HTTP routes
     @mcp.custom_route("/", methods=["GET"])
-    async def homepage(request: Request) -> HTMLResponse:
+    async def homepage(request: Request) -> HTMLResponse:  # pyright: ignore[reportUnusedFunction]
         """Serve the homepage for the MCP server."""
         template_content = (
             resources.files("open_targets_platform_mcp.templates").joinpath("homepage.html").read_text(encoding="utf-8")
@@ -91,6 +93,7 @@ def create_server() -> FastMCP:
         return JSONResponse({"status": "healthy", "service": "mcp-server"})
 
     mcp.tool(get_open_targets_graphql_schema, annotations={"readOnlyHint": True})
+    mcp.tool(get_type_dependencies, annotations={"readOnlyHint": True})
     mcp.tool(
         search_entities,
         description=resources.files("open_targets_platform_mcp.tools.search_entities")

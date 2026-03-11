@@ -17,15 +17,28 @@ Step 1: RESOLVE IDENTIFIERS
     Example: search_entity(query_string="BRCA1 BRCA2", entity_names=["target"])
 
 Step 2: LEARN QUERY STRUCTURE
-    Call `get_open_targets_graphql_schema` to retrieve the full API schema.
-    Study the schema to understand available types, fields, and their
-    relationships, then construct a GraphQL query that fetches the
-    information the user needs.
+    Call `get_open_targets_graphql_schema` with relevant categories to retrieve
+    the schema subset needed for your query. Select categories that cover the
+    data domains you need - BE INCLUSIVE (it's better to include extra categories
+    than to miss required types).
+
+    Example: For a query about drug mechanisms and safety:
+    get_open_targets_graphql_schema(categories=["drug-mechanisms", "drug-safety"])
+
+    Study the returned schema to understand available types, fields, and their
+    relationships, then construct a GraphQL query that fetches the information
+    the user needs.
+
+    FALLBACK: If you encounter errors or need detailed information about specific
+    types, use `get_type_dependencies` sparingly to explore type relationships.
+    This tool provides exhaustive type dependency information but should only be
+    used when category-based retrieval is insufficient.
 
 Step 3: CONSTRUCT AND EXECUTE BATCH QUERY
     Build GraphQL query and variables_list using:
     - Standardized IDs from Step 1 (REQUIRED)
     - Query patterns from Step 2
+    - Follow the "COMMON MISTAKES TO AVOID" guidance in the schema output
 
     Call this tool with query_string, variables_list, and key_field.
 

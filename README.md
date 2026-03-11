@@ -27,7 +27,8 @@ This package is the official Open Targets Platform MCP server implementation tha
 
 ## Features
 
-- 🔍 **GraphQL Schema Access**: Fetch and explore the complete Open Targets Platform GraphQL schema with detailed documentation
+- 🔍 **Category-Based Schema Access**: Fetch and explore focused subsets of the Open Targets Platform GraphQL schema using category-based subschemas
+- 🚀 **Pre-fetched Schema Optimization**: The GraphQL schema is pre-fetched and cached at server startup to ensure immediate availability for tools
 - 📊 **Query Execution**: Execute custom GraphQL queries against the Open Targets Platform API
 - ⚡ **Batch Query Processing**: Execute the same query multiple times with different parameters efficiently
 - 🔎 **Entity Search**: Search for entities across multiple types (targets, diseases, drugs, variants, studies)
@@ -165,10 +166,11 @@ otp-mcp --transport stdio --jq
 
 The MCP server provides the following tools:
 
-1. **`get_open_targets_graphql_schema`**: Fetch the complete GraphQL schema for the Open Targets Platform API, including detailed documentation for all types and fields
-2. **`query_open_targets_graphql`**: Execute GraphQL queries to retrieve data about targets, diseases, drugs, and their associations
-3. **`batch_query_open_targets_graphql`**: Execute the same GraphQL query multiple times with different variable sets for efficient batch processing
-4. **`search_entities`**: Search for entities across multiple types (targets, diseases, drugs, variants, studies) and retrieve their standardized IDs
+1. **`get_open_targets_graphql_schema`**: Fetch category-based subschemas from the Open Targets Platform API, including detailed documentation for relevant types and fields
+2. **`get_type_dependencies`**: Explore schema type relationships by fetching the exact GraphQL SDL (Schema Definition Language) subset for specified types and all their recursively reachable dependencies
+3. **`query_open_targets_graphql`**: Execute GraphQL queries to retrieve data about targets, diseases, drugs, and their associations
+4. **`batch_query_open_targets_graphql`**: Execute the same GraphQL query multiple times with different variable sets for efficient batch processing
+5. **`search_entities`**: Search for entities across multiple types (targets, diseases, drugs, variants, studies) and retrieve their standardized IDs
 
 ## Strategy
 
@@ -176,7 +178,9 @@ The MCP server implements a 3-step workflow that guides the LLM to efficiently r
 
 ### Step 1: Learn Query Structure from Schema
 
-The LLM calls `get_open_targets_graphql_schema` to understand the GraphQL API structure. The schema includes detailed documentation for all types and fields, enabling the LLM to construct valid queries.
+The LLM calls `get_open_targets_graphql_schema` with specific categories (e.g., "targets", "drug-mechanisms") to retrieve a focused subset of the schema. This provides detailed documentation for relevant types and fields, enabling the LLM to construct valid queries without being overwhelmed by the entire schema. The schema also includes specific guidance on how to properly declare GraphQL variables to avoid variable resolution errors.
+
+If deeper or more specific schema exploration is needed, the LLM can fall back to the `get_type_dependencies` tool to fetch the exact dependency tree and SDL subset for one or more specific types.
 
 **Key entity types include:**
 
@@ -250,7 +254,11 @@ open-targets-platform-mcp/
 │   ├── tools/               # MCP tools (organized by feature)
 │   │   ├── __init__.py      # Tool exports
 │   │   ├── schema/          # Schema fetching tool
-│   │   │   └── schema.py
+│   │   │   ├── schema.py    # Main schema tool implementation
+│   │   │   ├── type_graph.py # Type relationships graph exploration tool
+│   │   │   ├── caches.py    # Schema caching and pre-fetching
+│   │   │   ├── helper/      # Schema/subschema building helpers
+│   │   │   └── common_mistakes_guide.txt
 │   │   ├── query/           # Query execution tool
 │   │   │   ├── query.py
 │   │   │   ├── with_jq_description.txt
@@ -262,8 +270,11 @@ open-targets-platform-mcp/
 │   │   └── search_entities/ # Entity search tool
 │   │       ├── search_entities.py
 │   │       └── description.txt
-│   └── static/              # Static assets
-│       └── favicon.png
+│   ├── static/              # Static assets for Homepage/UI
+│   │   ├── favicon.png
+│   │   └── logo.png
+│   └── templates/           # HTML templates
+│       └── homepage.html
 ├── test/                    # Test suite
 │   ├── conftest.py
 │   ├── test_client/

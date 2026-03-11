@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from graphql import GraphQLSchema
 
 from open_targets_platform_mcp.client.graphql import execute_graphql_query, fetch_graphql_schema
 from open_targets_platform_mcp.model.result import QueryResultStatus
@@ -309,7 +310,7 @@ class TestFetchGraphQLSchema:
     @pytest.mark.asyncio
     async def test_fetch_graphql_schema_success(self):
         """Test successful schema fetching."""
-        mock_schema = Mock()
+        mock_schema = Mock(spec=GraphQLSchema)
         mock_client_instance = AsyncMock()
         mock_client_instance.schema = mock_schema
         mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
