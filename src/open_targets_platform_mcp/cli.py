@@ -25,7 +25,7 @@ def _version_callback(value: bool) -> None:
 def _list_tools_callback(value: bool) -> None:
     """List all available MCP tools."""
     if value:
-        mcp = create_server()
+        mcp = asyncio.run(create_server())
         tools = asyncio.run(mcp.get_tools())
         for name, tool in tools.items():
             # Extract first line of description from the tool's description field
@@ -126,11 +126,20 @@ def root(
             show_default=True,
         ),
     ] = settings.rate_limiting_enabled,
+    subschema_depth: Annotated[
+        str | None,
+        typer.Option(
+            "--subschema-depth",
+            help="Depth of reference expansion for category subschemas. "
+            "Integer N for N levels (0=no expansion), or 'exhaustive' for all reachable types.",
+            show_default=True,
+        ),
+    ] = str(settings.subschema_depth),
 ) -> None:
     """Entry point of CLI."""
     settings.update(**locals())
 
-    mcp = create_server()
+    mcp = asyncio.run(create_server())
 
     try:
         if settings.transport == TransportType.HTTP:
