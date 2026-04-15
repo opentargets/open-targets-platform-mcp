@@ -145,6 +145,7 @@ Configure the server using environment variables (all prefixed with `OTP_MCP_`).
 | `OTP_MCP_RATE_LIMITING_ENABLED` | `--rate-limiting` | Enable rate limiting | `false` |
 | `OTP_MCP_RATE_LIMITING_MAX_REQUESTS_PER_SECOND` | _(env only)_ | Maximum requests per second when rate limiting is enabled | `3` |
 | `OTP_MCP_RATE_LIMITING_BURST_CAPACITY` | _(env only)_ | Maximum burst capacity when rate limiting is enabled | `100` |
+| `OTP_MCP_DETAILED_TIMING_ENABLED` | `--detailed-timing` | Enable logging of detailed timing information for requests | `false` |
 
 **Examples:**
 

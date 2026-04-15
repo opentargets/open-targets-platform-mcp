@@ -126,6 +126,14 @@ def root(
             show_default=True,
         ),
     ] = settings.rate_limiting_enabled,
+    detailed_timing_enabled: Annotated[
+        bool | None,
+        typer.Option(
+            "--detailed-timing",
+            help="Enable logging of detailed timing information for requests",
+            show_default=True,
+        ),
+    ] = settings.detailed_timing_enabled,
     subschema_depth: Annotated[
         str | None,
         typer.Option(
