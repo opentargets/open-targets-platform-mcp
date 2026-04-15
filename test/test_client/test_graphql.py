@@ -1,8 +1,15 @@
 """Tests for GraphQL client module."""
 
+import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from gql.transport.exceptions import (
+    TransportConnectionFailed,
+    TransportProtocolError,
+    TransportQueryError,
+    TransportServerError,
+)
 from graphql import GraphQLSchema
 
 from open_targets_platform_mcp.client.graphql import execute_graphql_query, fetch_graphql_schema
@@ -73,7 +80,12 @@ class TestExecuteGraphQLQuery:
 
     @pytest.mark.asyncio
     async def test_execute_query_execution_error(self, sample_query_string):
-        """Test that query execution errors bubble up."""
+        """Generic (non-transport) execution errors still bubble up.
+
+        Only `gql.transport.exceptions.Transport*` and `asyncio.TimeoutError`
+        are converted to structured `QueryResult.create_error`. Anything else
+        is treated as a programmer bug and surfaces as the original exception.
+        """
         mock_client_instance = AsyncMock()
         mock_client_instance.execute_async = AsyncMock(side_effect=Exception("Network error"))
 
@@ -83,6 +95,175 @@ class TestExecuteGraphQLQuery:
                     await execute_graphql_query(sample_query_string)
 
         mock_client_instance.execute_async.assert_awaited_once()
+
+
+# ============================================================================
+# Transport-error conversion to structured QueryResult
+# ============================================================================
+
+
+class TestTransportErrorConversion:
+    """Verify that transport exceptions are converted to QueryResult.ERROR."""
+
+    @pytest.mark.asyncio
+    async def test_transport_query_error_returns_structured_result(
+        self,
+        sample_query_string,
+        mock_graphql_schema,
+    ):
+        """`TransportQueryError` -> QueryResult.ERROR with hints from the live schema cache."""
+        graphql_errors = [
+            {
+                "message": "Cannot query field 'symbol' on type 'Target'.",
+                "locations": [{"line": 1, "column": 1}],
+            },
+        ]
+        exc = TransportQueryError("query failed", errors=graphql_errors, data=None)
+
+        mock_client_instance = AsyncMock()
+        mock_client_instance.execute_async = AsyncMock(side_effect=exc)
+
+        with (
+            patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"),
+            patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance),
+            patch(
+                "open_targets_platform_mcp.client.graphql._get_cached_schema_safe",
+                AsyncMock(return_value=mock_graphql_schema),
+            ),
+        ):
+            result = await execute_graphql_query(sample_query_string)
+
+        assert result.status == QueryResultStatus.ERROR
+        assert isinstance(result.message, dict)
+        assert result.message["error_type"] == "graphql_query_error"
+        assert result.message["errors"] == graphql_errors
+        assert result.message["partial_data"] is None
+        hints = result.message["hints"]
+        assert len(hints) == 1
+        assert hints[0]["category"] == "unknown_field"
+        assert hints[0]["type"] == "Target"
+        assert "approvedSymbol" in hints[0]["did_you_mean"]
+
+    @pytest.mark.asyncio
+    async def test_transport_query_error_with_cold_schema_cache(self, sample_query_string):
+        """If the schema cache fails, hints still ship without `available_fields`."""
+        graphql_errors = [
+            {"message": "Cannot query field 'symbol' on type 'Target'."},
+        ]
+        exc = TransportQueryError("query failed", errors=graphql_errors)
+
+        mock_client_instance = AsyncMock()
+        mock_client_instance.execute_async = AsyncMock(side_effect=exc)
+
+        with (
+            patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"),
+            patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance),
+            patch(
+                "open_targets_platform_mcp.client.graphql._get_cached_schema_safe",
+                AsyncMock(return_value=None),
+            ),
+        ):
+            result = await execute_graphql_query(sample_query_string)
+
+        assert result.status == QueryResultStatus.ERROR
+        hint = result.message["hints"][0]
+        assert hint["category"] == "unknown_field"
+        assert hint["type"] == "Target"
+        assert "available_fields" not in hint
+
+    @pytest.mark.asyncio
+    async def test_transport_query_error_propagates_partial_data(
+        self,
+        sample_query_string,
+        mock_graphql_schema,
+    ):
+        """`TransportQueryError.data` (partial GraphQL data) is forwarded to the caller."""
+        partial = {"target": None}
+        exc = TransportQueryError(
+            "query failed",
+            errors=[{"message": "Cannot query field 'x' on type 'Target'."}],
+            data=partial,
+        )
+
+        mock_client_instance = AsyncMock()
+        mock_client_instance.execute_async = AsyncMock(side_effect=exc)
+
+        with (
+            patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"),
+            patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance),
+            patch(
+                "open_targets_platform_mcp.client.graphql._get_cached_schema_safe",
+                AsyncMock(return_value=mock_graphql_schema),
+            ),
+        ):
+            result = await execute_graphql_query(sample_query_string)
+
+        assert result.message["partial_data"] == partial
+
+    @pytest.mark.asyncio
+    async def test_transport_server_error(self, sample_query_string):
+        mock_client_instance = AsyncMock()
+        mock_client_instance.execute_async = AsyncMock(
+            side_effect=TransportServerError("HTTP 503"),
+        )
+
+        with (
+            patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"),
+            patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance),
+        ):
+            result = await execute_graphql_query(sample_query_string)
+
+        assert result.status == QueryResultStatus.ERROR
+        assert result.message["error_type"] == "server_error"
+        assert "503" in result.message["detail"]
+
+    @pytest.mark.asyncio
+    async def test_transport_protocol_error(self, sample_query_string):
+        mock_client_instance = AsyncMock()
+        mock_client_instance.execute_async = AsyncMock(
+            side_effect=TransportProtocolError("malformed response"),
+        )
+
+        with (
+            patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"),
+            patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance),
+        ):
+            result = await execute_graphql_query(sample_query_string)
+
+        assert result.status == QueryResultStatus.ERROR
+        assert result.message["error_type"] == "protocol_error"
+
+    @pytest.mark.asyncio
+    async def test_transport_connection_failed(self, sample_query_string):
+        mock_client_instance = AsyncMock()
+        mock_client_instance.execute_async = AsyncMock(
+            side_effect=TransportConnectionFailed("dns failure"),
+        )
+
+        with (
+            patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"),
+            patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance),
+        ):
+            result = await execute_graphql_query(sample_query_string)
+
+        assert result.status == QueryResultStatus.ERROR
+        assert result.message["error_type"] == "connection_error"
+
+    @pytest.mark.asyncio
+    async def test_asyncio_timeout(self, sample_query_string):
+        mock_client_instance = AsyncMock()
+        mock_client_instance.execute_async = AsyncMock(
+            side_effect=asyncio.TimeoutError("slow"),
+        )
+
+        with (
+            patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"),
+            patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance),
+        ):
+            result = await execute_graphql_query(sample_query_string)
+
+        assert result.status == QueryResultStatus.ERROR
+        assert result.message["error_type"] == "timeout"
 
 
 # ============================================================================
@@ -284,9 +465,7 @@ class TestGraphQLIntegration:
 
     @pytest.mark.asyncio
     async def test_real_invalid_query(self):
-        """Test that invalid query raises exception."""
-        from gql.transport.exceptions import TransportQueryError
-
+        """Invalid query returns a structured error with hints, not an exception."""
         invalid_query = """
         query {
             nonexistentField {
@@ -295,8 +474,70 @@ class TestGraphQLIntegration:
         }
         """
 
-        with pytest.raises(TransportQueryError):
-            await execute_graphql_query(invalid_query)
+        result = await execute_graphql_query(invalid_query)
+
+        assert result.status == QueryResultStatus.ERROR
+        assert result.message["error_type"] == "graphql_query_error"
+        hints = result.message["hints"]
+        assert len(hints) >= 1
+        assert hints[0]["category"] == "unknown_root_query"
+        assert hints[0]["field"] == "nonexistentField"
+
+    @pytest.mark.asyncio
+    async def test_real_unknown_field_on_target(self):
+        """Pattern 1: unknown field on a known type with did_you_mean."""
+        result = await execute_graphql_query(
+            'query { target(ensemblId: "ENSG00000141510") { bogus } }',
+        )
+
+        assert result.status == QueryResultStatus.ERROR
+        hint = result.message["hints"][0]
+        assert hint["category"] == "unknown_field"
+        assert hint["type"] == "Target"
+        assert hint["field"] == "bogus"
+        assert "approvedSymbol" in hint["available_fields"]
+
+    @pytest.mark.asyncio
+    async def test_real_unknown_argument(self):
+        """Pattern 3: wrong arg name. The API also returns a separate Pattern 7
+        error for the missing required `ensemblId`, so we expect two hints."""
+        result = await execute_graphql_query(
+            'query { target(id: "ENSG00000141510") { id } }',
+        )
+
+        assert result.status == QueryResultStatus.ERROR
+        hints = result.message["hints"]
+        categories = {h["category"] for h in hints}
+        assert "unknown_argument" in categories
+        assert "missing_required_argument" in categories
+        unknown_arg = next(h for h in hints if h["category"] == "unknown_argument")
+        assert unknown_arg["argument"] == "id"
+        assert "ensemblId" in unknown_arg["available_arguments"]
+
+    @pytest.mark.asyncio
+    async def test_real_missing_subselection(self):
+        """Pattern 5: scalar selection on a field that needs subselection."""
+        result = await execute_graphql_query(
+            'query { target(ensemblId: "ENSG00000141510") { proteinIds } }',
+        )
+
+        assert result.status == QueryResultStatus.ERROR
+        hint = result.message["hints"][0]
+        assert hint["category"] == "missing_subselection"
+        assert hint["field"] == "proteinIds"
+        assert hint["inner_type"] == "IdAndSource"
+
+    @pytest.mark.asyncio
+    async def test_real_undeclared_variable(self):
+        """Pattern 7: variable used but not declared in the operation."""
+        result = await execute_graphql_query(
+            "query { target(ensemblId: $ensemblId) { id } }",
+        )
+
+        assert result.status == QueryResultStatus.ERROR
+        hint = result.message["hints"][0]
+        assert hint["category"] == "undeclared_variable"
+        assert hint["variable"] == "ensemblId"
 
 
 # ============================================================================

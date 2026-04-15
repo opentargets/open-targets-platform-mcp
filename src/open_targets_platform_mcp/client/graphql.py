@@ -1,12 +1,39 @@
+import asyncio
 from typing import Any, cast
 
 import jq
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
+from gql.transport.exceptions import (
+    TransportConnectionFailed,
+    TransportProtocolError,
+    TransportQueryError,
+    TransportServerError,
+)
 from graphql import GraphQLSchema
 
+from open_targets_platform_mcp.client.error_hints import build_hints
 from open_targets_platform_mcp.model.result import QueryResult
 from open_targets_platform_mcp.settings import settings
+
+_SCHEMA_FETCH_TIMEOUT_CAP = 10
+
+
+async def _get_cached_schema_safe() -> GraphQLSchema | None:
+    """Best-effort fetch of the cached parsed schema for hint enrichment.
+
+    Reuses `tools.schema.caches.schema_cache` (lazy import to break the
+    import cycle: that module imports `fetch_graphql_schema` from here).
+    Never raises; returns `None` on any failure or timeout so error responses
+    can still ship with regex-derived hints when introspection is unavailable.
+    """
+    try:
+        from open_targets_platform_mcp.tools.schema.caches import schema_cache
+
+        timeout = min(int(settings.api_call_timeout), _SCHEMA_FETCH_TIMEOUT_CAP)
+        return await asyncio.wait_for(schema_cache.get(), timeout=timeout)
+    except Exception:
+        return None
 
 
 async def execute_graphql_query(
@@ -22,7 +49,13 @@ async def execute_graphql_query(
         jq_filter (str, optional): jq filter to apply to the result
 
     Returns:
-        QueryResult: The result of the GraphQL query
+        QueryResult: The result of the GraphQL query. Transport-level failures
+            (GraphQL errors from the server, server errors, protocol errors,
+            connection failures, timeouts) are caught and returned as
+            `QueryResult.create_error(...)` with a structured `message` dict
+            so callers (and downstream LLM agents) can act on them
+            programmatically. GraphQL query errors are additionally enriched
+            with `hints` derived from the live schema.
     """
     # Compile both the query and the jq filter before submitting a HTTP request
     # to detect errors early.
@@ -37,7 +70,35 @@ async def execute_graphql_query(
         timeout=settings.api_call_timeout,
     )
     client = Client(transport=transport)
-    result = await client.execute_async(query, variable_values=variables)
+    try:
+        result = await client.execute_async(query, variable_values=variables)
+    except TransportQueryError as e:
+        schema = await _get_cached_schema_safe()
+        errors = e.errors or []
+        return QueryResult.create_error(
+            message={
+                "error_type": "graphql_query_error",
+                "errors": errors,
+                "hints": build_hints(errors, schema),
+                "partial_data": e.data,
+            },
+        )
+    except TransportServerError as e:
+        return QueryResult.create_error(
+            message={"error_type": "server_error", "detail": str(e)},
+        )
+    except TransportProtocolError as e:
+        return QueryResult.create_error(
+            message={"error_type": "protocol_error", "detail": str(e)},
+        )
+    except TransportConnectionFailed as e:
+        return QueryResult.create_error(
+            message={"error_type": "connection_error", "detail": str(e)},
+        )
+    except asyncio.TimeoutError as e:
+        return QueryResult.create_error(
+            message={"error_type": "timeout", "detail": str(e)},
+        )
 
     if compiled_filter:
         try:
