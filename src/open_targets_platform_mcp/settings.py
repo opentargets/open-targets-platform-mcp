@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     rate_limiting_enabled: bool = False
     rate_limiting_max_requests_per_second: float = 3
     rate_limiting_burst_capacity: int = 100
+    detailed_timing_enabled: bool = False
     jq_enabled: bool = False
     subschema_depth: int | Literal["exhaustive"] = 1
 

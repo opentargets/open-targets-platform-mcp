@@ -5,6 +5,7 @@ from importlib import metadata, resources
 
 from fastmcp import FastMCP
 from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
+from fastmcp.server.middleware.timing import DetailedTimingMiddleware
 from mcp.types import Icon
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
@@ -45,6 +46,9 @@ async def create_server() -> FastMCP:
                 settings.rate_limiting_burst_capacity,
             ),
         )
+
+    if settings.detailed_timing_enabled:
+        mcp.add_middleware(DetailedTimingMiddleware())
 
     # Register custom HTTP routes
     @mcp.custom_route("/", methods=["GET"])
