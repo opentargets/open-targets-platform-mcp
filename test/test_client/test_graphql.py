@@ -80,11 +80,11 @@ class TestExecuteGraphQLQuery:
 
     @pytest.mark.asyncio
     async def test_execute_query_execution_error(self, sample_query_string):
-        """Generic (non-transport) execution errors still bubble up.
+        """Generic (non-transport) execution errors propagate as exceptions.
 
         Only `gql.transport.exceptions.Transport*` and `asyncio.TimeoutError`
-        are converted to structured `QueryResult.create_error`. Anything else
-        is treated as a programmer bug and surfaces as the original exception.
+        are converted to structured `QueryResult.create_error`; anything else
+        surfaces as the original exception.
         """
         mock_client_instance = AsyncMock()
         mock_client_instance.execute_async = AsyncMock(side_effect=Exception("Network error"))
@@ -465,7 +465,7 @@ class TestGraphQLIntegration:
 
     @pytest.mark.asyncio
     async def test_real_invalid_query(self):
-        """Invalid query returns a structured error with hints, not an exception."""
+        """Invalid query returns a structured error with hints."""
         invalid_query = """
         query {
             nonexistentField {
@@ -485,7 +485,7 @@ class TestGraphQLIntegration:
 
     @pytest.mark.asyncio
     async def test_real_unknown_field_on_target(self):
-        """Pattern 1: unknown field on a known type with did_you_mean."""
+        """Unknown field on a known type ships `did_you_mean` suggestions."""
         result = await execute_graphql_query(
             'query { target(ensemblId: "ENSG00000141510") { bogus } }',
         )
@@ -498,9 +498,23 @@ class TestGraphQLIntegration:
         assert "approvedSymbol" in hint["available_fields"]
 
     @pytest.mark.asyncio
+    async def test_real_dropped_prefix_suggestion(self):
+        """A base-word selection (`name`) on a type using a conventional
+        prefix (`approvedName`) should surface the prefixed field via
+        substring match."""
+        result = await execute_graphql_query(
+            'query { target(ensemblId: "ENSG00000141510") { name } }',
+        )
+
+        assert result.status == QueryResultStatus.ERROR
+        hint = result.message["hints"][0]
+        assert hint["category"] == "unknown_field"
+        assert "approvedName" in hint["did_you_mean"]
+
+    @pytest.mark.asyncio
     async def test_real_unknown_argument(self):
-        """Pattern 3: wrong arg name. The API also returns a separate Pattern 7
-        error for the missing required `ensemblId`, so we expect two hints."""
+        """Wrong argument name. The API also emits a missing-required-argument
+        error for `ensemblId`, so we expect two hints."""
         result = await execute_graphql_query(
             'query { target(id: "ENSG00000141510") { id } }',
         )
@@ -516,7 +530,7 @@ class TestGraphQLIntegration:
 
     @pytest.mark.asyncio
     async def test_real_missing_subselection(self):
-        """Pattern 5: scalar selection on a field that needs subselection."""
+        """Scalar selection on a field that requires a subselection."""
         result = await execute_graphql_query(
             'query { target(ensemblId: "ENSG00000141510") { proteinIds } }',
         )
@@ -529,7 +543,7 @@ class TestGraphQLIntegration:
 
     @pytest.mark.asyncio
     async def test_real_undeclared_variable(self):
-        """Pattern 7: variable used but not declared in the operation."""
+        """Variable used but not declared in the operation signature."""
         result = await execute_graphql_query(
             "query { target(ensemblId: $ensemblId) { id } }",
         )

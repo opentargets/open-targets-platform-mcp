@@ -1,12 +1,11 @@
 """Tests for the GraphQL error-hint builder.
 
-Most patterns are exercised against the mock_graphql_schema fixture
+Most patterns are exercised against the `mock_graphql_schema` fixture
 (see conftest.py); patterns whose hint payload depends only on the regex
-(e.g. variable_type_mismatch) use schema=None.
+(e.g. variable_type_mismatch) use `schema=None`.
 
-The exact message strings used here were captured from live calls against
-the upstream Open Targets endpoint during planning, so the regexes are
-verified against production behaviour.
+The message strings used here were captured from live calls against the
+upstream Open Targets endpoint, so the regexes match production behaviour.
 """
 
 from __future__ import annotations
@@ -114,6 +113,27 @@ class TestUnknownField:
         assert "available_fields" not in h
         assert h["did_you_mean"] == []
 
+    def test_substring_match_surfaces_prefixed_field(self, mock_graphql_schema):
+        """`name` should suggest `approvedName` even though difflib's ratio
+        (0.5) falls below `_DYM_CUTOFF` — the substring path provides the hit.
+        """
+        msg = "Cannot query field 'name' on type 'Target'."
+        h = build_hints([_err(msg)], mock_graphql_schema)[0]
+
+        assert h["category"] == "unknown_field"
+        assert "approvedName" in h["did_you_mean"]
+
+    def test_short_needle_skips_substring_match(self, mock_graphql_schema):
+        """Needles under `_SUBSTRING_MIN` fall through to difflib only, so
+        `id` doesn't pull in every field containing `id` as a substring."""
+        msg = "Cannot query field 'id' on type 'Target'."
+        h = build_hints([_err(msg)], mock_graphql_schema)[0]
+
+        # `id` has a difflib-ratio 1.0 match on the `id` field. Substring
+        # matching is skipped for short needles, so `ensemblId`-style
+        # neighbours would not be pulled in even if they existed.
+        assert h["did_you_mean"] == ["id"]
+
 
 # ============================================================================
 # Pattern 2: unknown root query (Query type) -- recategorisation
@@ -140,6 +160,33 @@ class TestUnknownRootQuery:
 
         assert h["category"] == "unknown_root_query"
         assert h["did_you_mean"] == ["variant"]
+
+    def test_multi_alternative_server_dym_all_captured(self):
+        """Sangria emits up to four ranked alternatives for partial-term
+        mistakes (`diseaseFromSrc` -> 4 fields); all are parsed into
+        `did_you_mean`, capped at `_DYM_LIMIT`."""
+        msg = (
+            "Cannot query field 'diseaseFromSrc' on type 'Evidence'. "
+            "Did you mean 'diseaseFromSource', 'diseaseFromSourceId', "
+            "'disease' or 'biosamplesFromSource'?"
+        )
+        h = build_hints([_err(msg)], schema=None)[0]
+
+        assert h["did_you_mean"] == [
+            "diseaseFromSource",
+            "diseaseFromSourceId",
+            "disease",
+        ]
+
+    def test_two_alternative_server_dym_parsed(self):
+        """Sangria emits "X or Y" for two alternatives; both are parsed."""
+        msg = (
+            "Cannot query field 'nope' on type 'Foo'. "
+            "Did you mean 'alpha' or 'beta'?"
+        )
+        h = build_hints([_err(msg)], schema=None)[0]
+
+        assert h["did_you_mean"] == ["alpha", "beta"]
 
 
 # ============================================================================
@@ -307,3 +354,24 @@ class TestTruncation:
         assert h["category"] == "unknown_field"
         assert len(h["available_fields"]) == 50
         assert h["available_fields_truncated"] is True
+
+    def test_fuzzy_reaches_fields_past_the_cap(self):
+        """Fuzzy matching sees the full field list even when
+        `available_fields` is truncated, so partial-term suggestions can
+        surface fields defined past `_MAX_AVAILABLE` on wide types."""
+        # `targetFromSource` sits at position 90 on this synthetic type,
+        # well past the 50-field cap.
+        fields = [f"unrelatedField{i}" for i in range(89)] + ["targetFromSource"]
+        sdl = (
+            "type Query { q: Wide } "
+            "type Wide {\n" + "\n".join(f"  {f}: String" for f in fields) + "\n}"
+        )
+        schema = build_schema(sdl)
+
+        msg = "Cannot query field 'fromSource' on type 'Wide'."
+        h = build_hints([_err(msg)], schema)[0]
+
+        assert h["available_fields_truncated"] is True
+        assert len(h["available_fields"]) == 50
+        assert "targetFromSource" not in h["available_fields"]
+        assert "targetFromSource" in h["did_you_mean"]
