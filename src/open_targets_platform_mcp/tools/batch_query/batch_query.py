@@ -1,11 +1,10 @@
 """Batch query execution tool for Open Targets Platform GraphQL API."""
 
-import asyncio
 from typing import Annotated, Any
 
 from pydantic import Field
 
-from open_targets_platform_mcp.client.graphql import execute_graphql_query
+from open_targets_platform_mcp.client.graphql import execute_graphql_batch_query
 from open_targets_platform_mcp.model.result import (
     BatchQueryResult,
     BatchQuerySingleResult,
@@ -15,30 +14,13 @@ from open_targets_platform_mcp.model.result import (
 )
 
 
-async def _handle_single_query(
-    index: int,
-    query_string: str,
-    variables: dict[str, Any],
-    key_field: str,
-    jq_filter: str | None,
-    semaphore: asyncio.Semaphore,
-) -> BatchQuerySingleResult:
-    async with semaphore:
-        result: QueryResult | None = None
-        key: str | None = None
-        if key_field not in variables:
-            key = None
-            result = QueryResult.create_error(
-                f"Key field '{key_field}' not found in variables at index {index}",
-                variables=variables,
-            )
-        else:
-            key = str(variables[key_field])
-            result = await execute_graphql_query(query_string, variables, jq_filter=jq_filter)
-            if result.status in (QueryResultStatus.ERROR, QueryResultStatus.WARNING):
-                result = result.model_copy(update={"variables": variables})
-
-        return BatchQuerySingleResult(index=index, key=key, result=result)
+def _build_summary(results: list[BatchQuerySingleResult], total: int) -> BatchQuerySummary:
+    return BatchQuerySummary(
+        total=total,
+        successful=len([result for result in results if result.result.status == QueryResultStatus.SUCCESS]),
+        failed=len([result for result in results if result.result.status == QueryResultStatus.ERROR]),
+        warning=len([result for result in results if result.result.status == QueryResultStatus.WARNING]),
+    )
 
 
 async def _batch_query_impl(
@@ -51,22 +33,43 @@ async def _batch_query_impl(
     if not variables_list:
         return QueryResult.create_error("variables_list cannot be empty")
 
-    # serialising the execution for now before the GraphQL client cache is
-    # implemented.
-    semaphore = asyncio.Semaphore(1)
-    tasks = [
-        _handle_single_query(idx, query_string, variables, key_field, jq_filter, semaphore)
-        for idx, variables in enumerate(variables_list)
-    ]
-    results = await asyncio.gather(*tasks)
+    results: list[BatchQuerySingleResult] = []
+    valid_indices: list[int] = []
+    valid_variables_list: list[dict[str, Any]] = []
+
+    for idx, variables in enumerate(variables_list):
+        if key_field not in variables:
+            results.append(
+                BatchQuerySingleResult(
+                    index=idx,
+                    key=None,
+                    result=QueryResult.create_error(
+                        f"Key field '{key_field}' not found in variables at index {idx}",
+                        variables=variables,
+                    ),
+                ),
+            )
+            continue
+
+        valid_indices.append(idx)
+        valid_variables_list.append(variables)
+
+    if valid_variables_list:
+        query_results = await execute_graphql_batch_query(query_string, valid_variables_list, jq_filter)
+
+        for idx, variables, result_item in zip(valid_indices, valid_variables_list, query_results, strict=True):
+            key = str(variables[key_field])
+            processed_result = result_item
+            if result_item.status in (QueryResultStatus.ERROR, QueryResultStatus.WARNING):
+                processed_result = result_item.model_copy(update={"variables": variables})
+
+            results.append(BatchQuerySingleResult(index=idx, key=key, result=processed_result))
+
+    results.sort(key=lambda item: item.index)
+
     return BatchQueryResult(
         results=results,
-        summary=BatchQuerySummary(
-            total=len(variables_list),
-            successful=len([result for result in results if result.result.status == QueryResultStatus.SUCCESS]),
-            failed=len([result for result in results if result.result.status == QueryResultStatus.ERROR]),
-            warning=len([result for result in results if result.result.status == QueryResultStatus.WARNING]),
-        ),
+        summary=_build_summary(results, len(variables_list)),
     )
 
 
