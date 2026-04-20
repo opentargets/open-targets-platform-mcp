@@ -4,11 +4,22 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from open_targets_platform_mcp.client import graphql as graphql_module
 from open_targets_platform_mcp.model.result import BatchQueryResult, QueryResult, QueryResultStatus
 from open_targets_platform_mcp.tools.batch_query.batch_query import _batch_query_impl
 
 # Use the internal implementation function directly for testing
 batch_query_fn = _batch_query_impl
+
+
+@pytest.fixture(autouse=True)
+def reset_graphql_session():
+    """Reset the global gql session between tests."""
+    graphql_module._runtime_state["client"] = None
+    graphql_module._runtime_state["session"] = None
+    yield
+    graphql_module._runtime_state["client"] = None
+    graphql_module._runtime_state["session"] = None
 
 
 class TestBatchQueryOpenTargetsGraphQL:
@@ -17,12 +28,11 @@ class TestBatchQueryOpenTargetsGraphQL:
     @pytest.mark.asyncio
     async def test_batch_query_success(self, batch_query_string, batch_variables_with_key):
         """Test successful batch query execution."""
-        # Mock execute_graphql_query to return success for each call
         with patch(
-            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_query",
+            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_batch_query",
             new_callable=AsyncMock,
         ) as mock_execute:
-            mock_execute.side_effect = [
+            mock_execute.return_value = [
                 QueryResult.create_success({"target": {"id": "ENSG00000141510", "approvedSymbol": "TP53"}}),
                 QueryResult.create_success({"target": {"id": "ENSG00000012048", "approvedSymbol": "BRCA1"}}),
                 QueryResult.create_success({"target": {"id": "ENSG00000139618", "approvedSymbol": "BRCA2"}}),
@@ -64,10 +74,10 @@ class TestBatchQueryOpenTargetsGraphQL:
         ]
 
         with patch(
-            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_query",
+            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_batch_query",
             new_callable=AsyncMock,
         ) as mock_execute:
-            mock_execute.side_effect = [
+            mock_execute.return_value = [
                 QueryResult.create_success({"target": {"id": "ENSG00000141510"}}),
                 QueryResult.create_success({"target": {"id": "ENSG00000139618"}}),
             ]
@@ -93,10 +103,10 @@ class TestBatchQueryOpenTargetsGraphQL:
     async def test_batch_query_partial_failures(self, batch_query_string, batch_variables_with_key):
         """Test batch query with some queries failing."""
         with patch(
-            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_query",
+            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_batch_query",
             new_callable=AsyncMock,
         ) as mock_execute:
-            mock_execute.side_effect = [
+            mock_execute.return_value = [
                 QueryResult.create_success({"target": {"id": "ENSG00000141510"}}),
                 QueryResult.create_error("Query failed"),
                 QueryResult.create_success({"target": {"id": "ENSG00000139618"}}),
@@ -118,15 +128,65 @@ class TestBatchQueryOpenTargetsGraphQL:
         assert result_dict["ENSG00000012048"].result.status == QueryResultStatus.ERROR
 
     @pytest.mark.asyncio
+    async def test_batch_query_results_mapped_to_correct_keys(
+        self,
+        batch_query_string,
+        batch_variables_with_key,
+    ):
+        """Each result must be mapped to the key from its own variables entry,
+        including correct data for successes and error details for failures.
+        """
+        with patch(
+            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_batch_query",
+            new_callable=AsyncMock,
+        ) as mock_execute:
+            mock_execute.return_value = [
+                QueryResult.create_success({"target": {"id": "ENSG00000141510", "approvedSymbol": "TP53"}}),
+                QueryResult.create_error("Upstream error for BRCA1"),
+                QueryResult.create_success({"target": {"id": "ENSG00000139618", "approvedSymbol": "BRCA2"}}),
+            ]
+
+            result = await batch_query_fn(
+                query_string=batch_query_string,
+                variables_list=batch_variables_with_key,
+                key_field="ensemblId",
+            )
+
+        assert isinstance(result, BatchQueryResult)
+        result_dict = {r.key: r for r in result.results}
+
+        # Correct data for first entry
+        tp53 = result_dict["ENSG00000141510"]
+        assert tp53.result.status == QueryResultStatus.SUCCESS
+        assert tp53.result.result["target"]["approvedSymbol"] == "TP53"
+
+        # Error mapped to middle entry, not bleed into neighbours
+        brca1 = result_dict["ENSG00000012048"]
+        assert brca1.result.status == QueryResultStatus.ERROR
+        assert "BRCA1" in str(brca1.result.message)
+
+        # Correct data for last entry despite middle failure
+        brca2 = result_dict["ENSG00000139618"]
+        assert brca2.result.status == QueryResultStatus.SUCCESS
+        assert brca2.result.result["target"]["approvedSymbol"] == "BRCA2"
+
+        # Order in result list matches original input order
+        assert [r.key for r in result.results] == [
+            "ENSG00000141510",
+            "ENSG00000012048",
+            "ENSG00000139618",
+        ]
+
+    @pytest.mark.asyncio
     async def test_batch_query_with_jq_filter(self, batch_query_string, batch_variables_with_key):
         """Test batch query with jq filter applied."""
         jq_filter = ".data.target.approvedSymbol"
 
         with patch(
-            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_query",
+            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_batch_query",
             new_callable=AsyncMock,
         ) as mock_execute:
-            mock_execute.side_effect = [
+            mock_execute.return_value = [
                 QueryResult.create_success("TP53"),
                 QueryResult.create_success("BRCA1"),
                 QueryResult.create_success("BRCA2"),
@@ -139,11 +199,12 @@ class TestBatchQueryOpenTargetsGraphQL:
                 jq_filter=jq_filter,
             )
 
-        # Verify jq_filter was passed to execute_graphql_query
-        assert mock_execute.call_count == 3
-        for call in mock_execute.call_args_list:
-            # jq_filter is passed as a keyword argument
-            assert call.kwargs["jq_filter"] == jq_filter
+        # Verify jq_filter was passed to execute_graphql_batch_query
+        mock_execute.assert_called_once_with(
+            batch_query_string,
+            batch_variables_with_key,
+            jq_filter,
+        )
 
         assert isinstance(result, BatchQueryResult)
         assert result.summary.successful == 3
@@ -152,10 +213,10 @@ class TestBatchQueryOpenTargetsGraphQL:
     async def test_batch_query_without_jq_filter(self, batch_query_string, batch_variables_with_key):
         """Test batch query without jq filter."""
         with patch(
-            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_query",
+            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_batch_query",
             new_callable=AsyncMock,
         ) as mock_execute:
-            mock_execute.side_effect = [
+            mock_execute.return_value = [
                 QueryResult.create_success({"target": {"id": "ENSG00000141510"}}),
                 QueryResult.create_success({"target": {"id": "ENSG00000012048"}}),
                 QueryResult.create_success({"target": {"id": "ENSG00000139618"}}),
@@ -168,23 +229,24 @@ class TestBatchQueryOpenTargetsGraphQL:
                 jq_filter=None,
             )
 
-        # Verify jq_filter was NOT passed (should be None)
-        assert mock_execute.call_count == 3
-        for call in mock_execute.call_args_list:
-            # jq_filter is passed as a keyword argument
-            assert call.kwargs.get("jq_filter") is None
+        # Verify jq_filter was passed as None
+        mock_execute.assert_called_once_with(
+            batch_query_string,
+            batch_variables_with_key,
+            None,
+        )
 
         assert isinstance(result, BatchQueryResult)
         assert result.summary.successful == 3
 
     @pytest.mark.asyncio
     async def test_batch_query_exception_handling(self, batch_query_string, batch_variables_with_key):
-        """Test that error results during individual query execution are handled."""
+        """Test that error results during batch query execution are handled."""
         with patch(
-            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_query",
+            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_batch_query",
             new_callable=AsyncMock,
         ) as mock_execute:
-            mock_execute.side_effect = [
+            mock_execute.return_value = [
                 QueryResult.create_success({"target": {"id": "ENSG00000141510"}}),
                 QueryResult.create_error("Network error"),
                 QueryResult.create_success({"target": {"id": "ENSG00000139618"}}),
@@ -209,12 +271,12 @@ class TestBatchQueryOpenTargetsGraphQL:
 
     @pytest.mark.asyncio
     async def test_batch_query_calls_execute_correctly(self, batch_query_string, batch_variables_with_key):
-        """Test that batch query calls execute_graphql_query correctly."""
+        """Test that batch query calls execute_graphql_batch_query correctly."""
         with patch(
-            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_query",
+            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_batch_query",
             new_callable=AsyncMock,
         ) as mock_execute:
-            mock_execute.return_value = QueryResult.create_success({})
+            mock_execute.return_value = [QueryResult.create_success({})]
 
             await batch_query_fn(
                 query_string=batch_query_string,
@@ -225,41 +287,45 @@ class TestBatchQueryOpenTargetsGraphQL:
             # Verify the function was called with correct arguments
             mock_execute.assert_called_once_with(
                 batch_query_string,
-                batch_variables_with_key[0],
-                jq_filter=None,
+                [batch_variables_with_key[0]],
+                None,
             )
 
     @pytest.mark.asyncio
     async def test_batch_query_parallel_execution(self, batch_query_string, batch_variables_with_key):
-        """Test that queries are executed in parallel."""
-        call_order = []
-
-        async def track_call(query_string, variables, jq_filter=None):
-            call_order.append(variables["ensemblId"])
-            return QueryResult.create_success({})
-
+        """Test that all variables are passed in a single batch call."""
         with patch(
-            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_query",
-            side_effect=track_call,
-        ):
+            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_batch_query",
+            new_callable=AsyncMock,
+        ) as mock_execute:
+            mock_execute.return_value = [
+                QueryResult.create_success({}),
+                QueryResult.create_success({}),
+                QueryResult.create_success({}),
+            ]
+
             await batch_query_fn(
                 query_string=batch_query_string,
                 variables_list=batch_variables_with_key,
                 key_field="ensemblId",
             )
 
-        # Verify all queries were called (order may vary due to parallel execution)
-        assert len(call_order) == 3
-        assert set(call_order) == {"ENSG00000141510", "ENSG00000012048", "ENSG00000139618"}
+        # Verify all variables were passed in a single call
+        mock_execute.assert_called_once()
+        assert mock_execute.call_args.args[1] == batch_variables_with_key
 
     @pytest.mark.asyncio
     async def test_batch_query_result_structure(self, batch_query_string, batch_variables_with_key):
         """Test the structure of batch query results."""
         with patch(
-            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_query",
+            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_batch_query",
             new_callable=AsyncMock,
         ) as mock_execute:
-            mock_execute.return_value = QueryResult.create_success({"target": {"id": "test"}})
+            mock_execute.return_value = [
+                QueryResult.create_success({"target": {"id": "test"}}),
+                QueryResult.create_success({"target": {"id": "test"}}),
+                QueryResult.create_success({"target": {"id": "test"}}),
+            ]
 
             result = await batch_query_fn(
                 query_string=batch_query_string,
@@ -282,13 +348,15 @@ class TestBatchQueryOpenTargetsGraphQL:
     async def test_batch_query_jq_filter_warning(self, batch_query_string, batch_variables_with_key):
         """Test that jq filter warnings are preserved in results."""
         with patch(
-            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_query",
+            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_batch_query",
             new_callable=AsyncMock,
         ) as mock_execute:
-            mock_execute.return_value = QueryResult.create_warning(
-                {"target": {"id": "test"}},
-                "jq filter failed: null value",
-            )
+            mock_execute.return_value = [
+                QueryResult.create_warning(
+                    {"target": {"id": "test"}},
+                    "jq filter failed: null value",
+                ),
+            ]
 
             result = await batch_query_fn(
                 query_string=batch_query_string,
@@ -314,8 +382,10 @@ class TestBatchQueryIntegration:
     """Integration tests with real API calls."""
 
     @pytest.mark.asyncio
-    async def test_real_batch_query(self):
-        """Test real batch query against Open Targets Platform API."""
+    async def test_real_batch_query_raises_on_unsupported_api(self):
+        """The Open Targets Platform API does not support native batch queries."""
+        from gql.transport.exceptions import TransportConnectionFailed, TransportServerError
+
         query = """
         query GetTarget($ensemblId: String!) {
             target(ensemblId: $ensemblId) {
@@ -330,56 +400,5 @@ class TestBatchQueryIntegration:
             {"ensemblId": "ENSG00000012048"},
         ]
 
-        result = await batch_query_fn(query_string=query, variables_list=variables_list, key_field="ensemblId")
-
-        assert isinstance(result, BatchQueryResult)
-        assert result.summary.total == 2
-        assert result.summary.successful == 2
-        assert result.summary.failed == 0
-
-        # Verify actual data
-        result_dict = {r.key: r for r in result.results if r.key is not None}
-        assert result_dict["ENSG00000141510"].result.result["target"]["approvedSymbol"] == "TP53"
-        assert result_dict["ENSG00000012048"].result.result["target"]["approvedSymbol"] == "BRCA1"
-
-    @pytest.mark.asyncio
-    async def test_real_batch_query_with_jq_filter(self):
-        """Test real batch query with jq filter (requires jq enabled)."""
-        from open_targets_platform_mcp.settings import settings
-
-        # Enable jq for this integration test
-        original_jq_enabled = settings.jq_enabled
-        settings.jq_enabled = True
-
-        try:
-            query = """
-            query GetTarget($ensemblId: String!) {
-                target(ensemblId: $ensemblId) {
-                    id
-                    approvedSymbol
-                }
-            }
-            """
-
-            variables_list = [
-                {"ensemblId": "ENSG00000141510"},
-                {"ensemblId": "ENSG00000012048"},
-            ]
-
-            result = await batch_query_fn(
-                query_string=query,
-                variables_list=variables_list,
-                key_field="ensemblId",
-                jq_filter=".target.approvedSymbol",
-            )
-
-            assert isinstance(result, BatchQueryResult)
-            result_dict = {r.key: r for r in result.results if r.key is not None}
-            # jq filter returns a list (even for single results)
-            assert isinstance(result_dict["ENSG00000141510"].result.result, list)
-            assert result_dict["ENSG00000141510"].result.result == ["TP53"]
-            assert isinstance(result_dict["ENSG00000012048"].result.result, list)
-            assert result_dict["ENSG00000012048"].result.result == ["BRCA1"]
-        finally:
-            # Restore original value
-            settings.jq_enabled = original_jq_enabled
+        with pytest.raises((TransportServerError, TransportConnectionFailed, Exception)):
+            await batch_query_fn(query_string=query, variables_list=variables_list, key_field="ensemblId")

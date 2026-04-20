@@ -30,7 +30,7 @@ class TestCreateServer:
     @pytest.mark.asyncio
     async def test_all_tools_have_readonly_hint(self):
         """Test that all registered tools have readOnlyHint set to True."""
-        server = create_server()
+        server = await create_server()
         tools = await server.get_tools()
 
         # Ensure at least one tool is registered
