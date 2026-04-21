@@ -1,13 +1,10 @@
 import asyncio
 from importlib import metadata
-from typing import Annotated, Any
+from typing import Annotated
 
 import typer
-import uvicorn
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
+from starlette.middleware import Middleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from open_targets_platform_mcp.create_server import create_server
 from open_targets_platform_mcp.settings import TransportType, settings
@@ -157,25 +154,42 @@ def root(
     try:
         if settings.transport == TransportType.HTTP:
 
-            class MCPMethodOverrideMiddleware(BaseHTTPMiddleware):
-                async def dispatch(self, request: Request, call_next: Any) -> JSONResponse:
-                    if request.url.path in {"/mcp", "/mcp/"} and request.method in {"GET", "HEAD", "OPTIONS"}:
-                        return JSONResponse(
-                            status_code=405,
-                            content={"error": "Method Not Allowed"},
-                            headers={"Allow": "POST"},
-                        )
-                    return await call_next(request)
+            class MCPMethodOverrideMiddleware:
+                def __init__(self, app: ASGIApp) -> None:
+                    self.app = app
 
-            mcp_asgi = mcp.http_app(
-                path="/",
+                async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+                    if (
+                        scope["type"] == "http"
+                        and scope.get("path") in {"/mcp", "/mcp/"}
+                        and scope.get("method") in {"GET", "HEAD", "OPTIONS"}
+                    ):
+                        await send(
+                            {
+                                "type": "http.response.start",
+                                "status": 405,
+                                "headers": [
+                                    (b"content-type", b"application/json"),
+                                    (b"allow", b"POST"),
+                                ],
+                            },
+                        )
+                        await send(
+                            {
+                                "type": "http.response.body",
+                                "body": b'{"error": "Method Not Allowed"}',
+                            },
+                        )
+                        return
+                    await self.app(scope, receive, send)
+
+            mcp.run(
                 transport=settings.transport.value,
+                host=settings.http_host,
+                port=settings.http_port,
                 stateless_http=settings.stateless_http,
+                middleware=[Middleware(MCPMethodOverrideMiddleware)],
             )
-            app = FastAPI(lifespan=mcp_asgi.lifespan)
-            app.mount("/mcp", mcp_asgi)
-            app.add_middleware(MCPMethodOverrideMiddleware)
-            uvicorn.run(app, host=settings.http_host, port=settings.http_port)
         else:
             mcp.run(
                 transport=settings.transport.value,
