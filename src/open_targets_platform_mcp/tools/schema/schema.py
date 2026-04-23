@@ -3,6 +3,7 @@
 from importlib import resources
 from typing import Annotated
 
+from fastmcp.exceptions import ToolError
 from pydantic import Field
 
 from open_targets_platform_mcp.tools.schema.caches import category_subschemas_cache, schema_cache
@@ -30,7 +31,7 @@ async def get_open_targets_graphql_schema(
             f"Invalid category name(s): {', '.join(invalid_categories)}. "
             f"Available categories: {', '.join(available_categories)}"
         )
-        raise ValueError(msg)
+        raise ToolError(msg)
 
     # Collect all types from requested categories
     all_types: set[str] = set()

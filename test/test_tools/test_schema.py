@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from fastmcp.exceptions import ToolError
 from graphql import GraphQLSchema, build_schema
 
 from open_targets_platform_mcp.tools.schema import schema
@@ -84,7 +85,7 @@ async def test_get_open_targets_graphql_schema_raises_for_invalid_category(
     ) as mock_fetch:
         mock_fetch.return_value = mock_graphql_schema
 
-        with pytest.raises(ValueError, match="Invalid category"):
+        with pytest.raises(ToolError, match="Invalid category"):
             await schema.get_open_targets_graphql_schema(["nonexistent-category"])
 
 
