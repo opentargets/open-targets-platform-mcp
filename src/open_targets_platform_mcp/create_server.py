@@ -20,6 +20,7 @@ from open_targets_platform_mcp.tools import (
     query_without_jq,
     search_entities,
 )
+from open_targets_platform_mcp.tools.schema.schema import build_schema_docstring
 
 
 async def create_server() -> FastMCP:
@@ -96,7 +97,11 @@ async def create_server() -> FastMCP:
     async def health_check(_: Request) -> JSONResponse:
         return JSONResponse({"status": "healthy", "service": "mcp-server"})
 
-    mcp.tool(get_open_targets_graphql_schema, annotations={"readOnlyHint": True})
+    mcp.tool(
+        get_open_targets_graphql_schema,
+        description=build_schema_docstring(),
+        annotations={"readOnlyHint": True},
+    )
     mcp.tool(get_type_dependencies, annotations={"readOnlyHint": True})
     mcp.tool(
         search_entities,

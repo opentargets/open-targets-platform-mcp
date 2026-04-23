@@ -4,6 +4,7 @@ import pytest
 
 from open_targets_platform_mcp.create_server import create_server
 from open_targets_platform_mcp.server import mcp
+from open_targets_platform_mcp.tools.schema.schema import build_schema_docstring
 
 
 class TestCreateServer:
@@ -26,6 +27,24 @@ class TestCreateServer:
         result = await create_server()
 
         assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_schema_tool_description_is_full_docstring(self):
+        """The registered get_open_targets_graphql_schema description must include
+        the full category list, regardless of FastMCP version.
+
+        Regression: FastMCP 3.x parses Google-style docstrings via griffe and only
+        keeps the first text section, dropping the trailing "Available categories:"
+        block. Passing description= explicitly to mcp.tool(...) bypasses that.
+        """
+        server = await create_server()
+        tool = await server.get_tool("get_open_targets_graphql_schema")
+
+        assert tool.description is not None
+        assert tool.description.rstrip() == build_schema_docstring().rstrip()
+        assert "Available categories:" in tool.description
+        assert "drug-mechanisms" in tool.description
+        assert "genetic-associations" in tool.description
 
     @pytest.mark.asyncio
     async def test_all_tools_have_readonly_hint(self):
