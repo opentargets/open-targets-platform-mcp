@@ -29,27 +29,13 @@ async def get_type_dependencies(
         ),
     ],
 ) -> dict[str, str]:
-    """Get schema subsets for types, separated by specific and shared deps.
+    """Get SDL subsets for the given GraphQL type names, split into
+    type-specific and shared dependencies.
 
-    Given a list of type names, returns SDL (Schema Definition Language)
-    organized into type-specific dependencies and shared dependencies.
-
-    Returns a dict with:
-        - One key per input type: SDL for types ONLY reachable from that type
-        - "shared" key: SDL for types reachable from multiple input types
-
-    Examples:
-        - get_type_dependencies(["Target"]) - All deps under "Target" key
-        - get_type_dependencies(["Target", "Drug"]) - Separated + shared
-
-    Args:
-        type_names: List of GraphQL type names to start exploration from
-
-    Returns:
-        dict with type-specific SDL and shared SDL
-
-    Raises:
-        ValueError: If any type_name is not found in the schema
+    The model-facing description lives in `type_graph_description.txt` and is
+    passed explicitly to `mcp.tool(...)` in `create_server.py` to bypass
+    FastMCP 3.x's griffe docstring parser, which truncates Google-style
+    sections.
     """
     graph = await type_graph_cache.get()
     available_types = sorted(graph.types.keys())

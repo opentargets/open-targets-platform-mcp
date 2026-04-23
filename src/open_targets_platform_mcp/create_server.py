@@ -102,7 +102,13 @@ async def create_server() -> FastMCP:
         description=build_schema_docstring(),
         annotations={"readOnlyHint": True},
     )
-    mcp.tool(get_type_dependencies, annotations={"readOnlyHint": True})
+    mcp.tool(
+        get_type_dependencies,
+        description=resources.files("open_targets_platform_mcp.tools.schema")
+        .joinpath("type_graph_description.txt")
+        .read_text(encoding="utf-8"),
+        annotations={"readOnlyHint": True},
+    )
     mcp.tool(
         search_entities,
         description=resources.files("open_targets_platform_mcp.tools.search_entities")

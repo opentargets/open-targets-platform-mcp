@@ -47,6 +47,19 @@ class TestCreateServer:
         assert "genetic-associations" in tool.description
 
     @pytest.mark.asyncio
+    async def test_type_dependencies_tool_description_is_full(self):
+        """The registered get_type_dependencies description must include the
+        Examples block and the dict-shape explanation, regardless of FastMCP
+        version. Same griffe-truncation regression as above."""
+        server = await create_server()
+        tool = await server.get_tool("get_type_dependencies")
+
+        assert tool.description is not None
+        assert "Examples:" in tool.description
+        assert 'get_type_dependencies(["Target"])' in tool.description
+        assert "shared" in tool.description
+
+    @pytest.mark.asyncio
     async def test_all_tools_have_readonly_hint(self):
         """Test that all registered tools have readOnlyHint set to True."""
         server = await create_server()
