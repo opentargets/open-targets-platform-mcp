@@ -33,9 +33,7 @@ async def get_type_dependencies(
     type-specific and shared dependencies.
 
     The model-facing description lives in `type_graph_description.txt` and is
-    passed explicitly to `mcp.tool(...)` in `create_server.py` to bypass
-    FastMCP 3.x's griffe docstring parser, which truncates Google-style
-    sections.
+    passed explicitly to `mcp.tool(...)` in `create_server.py`.
     """
     graph = await type_graph_cache.get()
     available_types = sorted(graph.types.keys())

@@ -31,11 +31,11 @@ class TestCreateServer:
     @pytest.mark.asyncio
     async def test_schema_tool_description_is_full_docstring(self):
         """The registered get_open_targets_graphql_schema description must include
-        the full category list, regardless of FastMCP version.
+        the full category list.
 
-        Regression: FastMCP 3.x parses Google-style docstrings via griffe and only
-        keeps the first text section, dropping the trailing "Available categories:"
-        block. Passing description= explicitly to mcp.tool(...) bypasses that.
+        Regression: FastMCP parses Google-style docstrings and only keeps the
+        first text section, dropping the trailing "Available categories:" block.
+        Passing description= explicitly to mcp.tool(...) preserves it.
         """
         server = await create_server()
         tool = await server.get_tool("get_open_targets_graphql_schema")
@@ -49,8 +49,8 @@ class TestCreateServer:
     @pytest.mark.asyncio
     async def test_type_dependencies_tool_description_is_full(self):
         """The registered get_type_dependencies description must include the
-        Examples block and the dict-shape explanation, regardless of FastMCP
-        version. Same griffe-truncation regression as above."""
+        Examples block and the dict-shape explanation. Same docstring-parser
+        regression as above."""
         server = await create_server()
         tool = await server.get_tool("get_type_dependencies")
 
@@ -64,7 +64,7 @@ class TestCreateServer:
         """Test that all registered tools have readOnlyHint set to True."""
         server = await create_server()
 
-        # FastMCP 2.x exposes get_tools() returning a dict; 3.x exposes list_tools()
+        # FastMCP exposes either get_tools() returning a dict or list_tools()
         # returning a list.
         if hasattr(server, "get_tools"):
             tools = list((await server.get_tools()).values())
