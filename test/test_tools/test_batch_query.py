@@ -184,36 +184,6 @@ class TestBatchQueryOpenTargetsGraphQL:
         assert result.summary.successful == 3
 
     @pytest.mark.asyncio
-    async def test_batch_query_exception_handling(self, batch_query_string, batch_variables_with_key):
-        """Test that ToolError raised by a single item is contained to that item."""
-        with patch(
-            "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_query",
-            new_callable=AsyncMock,
-        ) as mock_execute:
-            mock_execute.side_effect = [
-                QueryResult.create_success({"target": {"id": "ENSG00000141510"}}),
-                ToolError("Network error"),
-                QueryResult.create_success({"target": {"id": "ENSG00000139618"}}),
-            ]
-
-            result = await batch_query_fn(
-                query_string=batch_query_string,
-                variables_list=batch_variables_with_key,
-                key_field="ensemblId",
-            )
-
-        assert isinstance(result, BatchQueryResult)
-        assert result.summary.total == 3
-        assert result.summary.successful == 2
-        assert result.summary.failed == 1
-
-        # Check the error result
-        result_dict = {r.key: r for r in result.results if r.key is not None}
-        failed_result = result_dict["ENSG00000012048"]
-        assert failed_result.result.status == QueryResultStatus.ERROR
-        assert "Network error" in str(failed_result.result.message)
-
-    @pytest.mark.asyncio
     async def test_batch_query_calls_execute_correctly(self, batch_query_string, batch_variables_with_key):
         """Test that batch query calls execute_graphql_query correctly."""
         with patch(

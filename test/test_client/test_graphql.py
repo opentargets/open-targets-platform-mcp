@@ -84,7 +84,7 @@ class TestExecuteGraphQLQuery:
         """Generic (non-transport) execution errors propagate as exceptions.
 
         Only `gql.transport.exceptions.Transport*` and `asyncio.TimeoutError`
-        are converted to structured `QueryResult.create_error`; anything else
+        are converted into `ToolError` with prose+hints; anything else
         surfaces as the original exception.
         """
         mock_client_instance = AsyncMock()
