@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock
 
 import pytest
+from fastmcp.exceptions import ToolError
 from graphql import build_schema
 
 from open_targets_platform_mcp.tools.schema import type_graph as schema_type_graph
@@ -301,23 +302,23 @@ class TestGetTypeDependencies:
 
     @pytest.mark.asyncio
     async def test_raises_for_invalid_type(self, clear_cache, mock_graphql_schema):
-        """Should raise ValueError for unknown type."""
+        """Should raise ToolError for unknown type."""
         mock_factory = AsyncMock(return_value=type_graph.build_type_graph(mock_graphql_schema))
         type_graph_cache.set_factory(mock_factory)
         schema_cache.set_factory(AsyncMock(return_value=mock_graphql_schema))
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ToolError, match="not found in schema"):
             await schema_type_graph.get_type_dependencies(["NonExistentType"])
 
     @pytest.mark.asyncio
     async def test_suggests_similar_types(self, clear_cache, mock_graphql_schema):
-        """Should suggest similar types when raising ValueError."""
+        """Should suggest similar types when raising ToolError."""
         mock_factory = AsyncMock(return_value=type_graph.build_type_graph(mock_graphql_schema))
         type_graph_cache.set_factory(mock_factory)
         schema_cache.set_factory(AsyncMock(return_value=mock_graphql_schema))
 
         # "Targt" is close to "Target" - error message includes available types
-        with pytest.raises(ValueError):
+        with pytest.raises(ToolError):
             await schema_type_graph.get_type_dependencies(["Targt"])
 
     @pytest.mark.asyncio
