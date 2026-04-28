@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from typing import Any, cast
 
 import jq
@@ -74,23 +73,10 @@ async def _execute_graphql_query_with_session(
     query = gql(query_string)
     compiled_filter = _compile_jq_filter(jq_filter)
     request = GraphQLRequest(query, variable_values=variables)
+
     result = await session.execute(request)
 
     return _result_with_optional_filter(result, compiled_filter, jq_filter)
-
-
-async def _execute_graphql_batch_query_with_session(
-    session: AsyncClientSession,
-    query_string: str,
-    variables_list: Sequence[dict[str, Any]],
-    jq_filter: str | None = None,
-) -> list[QueryResult]:
-    query = gql(query_string)
-    compiled_filter = _compile_jq_filter(jq_filter)
-    requests = [GraphQLRequest(query, variable_values=variables) for variables in variables_list]
-    raw_results = await session.execute_batch(requests)
-
-    return [_result_with_optional_filter(result, compiled_filter, jq_filter) for result in raw_results]
 
 
 async def execute_graphql_query(
@@ -101,16 +87,6 @@ async def execute_graphql_query(
     """Make a generic GraphQL API call and apply a jq filter to the result."""
     session = await _get_global_graphql_session()
     return await _execute_graphql_query_with_session(session, query_string, variables, jq_filter)
-
-
-async def execute_graphql_batch_query(
-    query_string: str,
-    variables_list: Sequence[dict[str, Any]],
-    jq_filter: str | None = None,
-) -> list[QueryResult]:
-    """Execute one query with many variable sets, one result per set."""
-    session = await _get_global_graphql_session()
-    return await _execute_graphql_batch_query_with_session(session, query_string, variables_list, jq_filter)
 
 
 async def fetch_graphql_schema() -> GraphQLSchema:
