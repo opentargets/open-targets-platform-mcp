@@ -2,6 +2,7 @@ import asyncio
 from typing import Any, cast
 
 import jq
+from fastmcp.exceptions import ToolError
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 from gql.transport.exceptions import (
@@ -13,7 +14,7 @@ from gql.transport.exceptions import (
 from graphql import GraphQLSchema
 from graphql.error import GraphQLError
 
-from open_targets_platform_mcp.client.error_hints import build_hints
+from open_targets_platform_mcp.client.error_hints import build_hints, render_error_with_hints
 from open_targets_platform_mcp.model.result import QueryResult
 from open_targets_platform_mcp.settings import settings
 
@@ -50,19 +51,23 @@ async def execute_graphql_query(
         jq_filter (str, optional): jq filter to apply to the result
 
     Returns:
-        QueryResult: The result of the GraphQL query. Transport-level failures
-            (GraphQL errors from the server, server errors, protocol errors,
-            connection failures, timeouts) are caught and returned as
-            `QueryResult.create_error(...)` with a structured `message` dict
-            so callers (and downstream LLM agents) can act on them
-            programmatically. GraphQL query errors are additionally enriched
-            with `hints` derived from the live schema.
+        QueryResult: A success (`QueryResultStatus.SUCCESS`) carrying the
+            (optionally jq-filtered) GraphQL response, or a warning
+            (`QueryResultStatus.WARNING`) when the GraphQL call succeeded
+            but the jq filter failed at runtime.
+
+    Raises:
+        ToolError: For every recognised pre-call or transport-level failure,
+            i.e. GraphQL syntax errors from `gql()`, jq-filter compile errors
+            from `jq.compile`, and `gql.transport.exceptions.Transport*` /
+            `asyncio.TimeoutError` raised by the transport. The message is
+            human-readable prose with did-you-mean hints derived from the
+            live schema where applicable. `ToolError` is re-raised verbatim
+            by FastMCP regardless of `mask_error_details`, so the message
+            reaches MCP clients with `isError=true`.
     """
-    # Compile both the query and the jq filter before submitting a HTTP request
-    # to detect errors early. Pre-call compile failures are converted to
-    # structured `QueryResult.create_error(...)` payloads so they survive
-    # FastMCP's `mask_error_details=True` wrapper instead of being raised
-    # into the tool runner as opaque `ToolError`s.
+    # Compile both the query and the jq filter before submitting an HTTP
+    # request so detectable errors surface before any network round-trip.
     try:
         query = gql(query_string)
     except GraphQLError as e:
@@ -71,19 +76,13 @@ async def execute_graphql_query(
             hints = build_hints([{"message": str(e)}], schema)
         except Exception:
             hints = []
-        return QueryResult.create_error(
-            message={
-                "error_type": "graphql_syntax_error",
-                "detail": str(e),
-                "hints": hints,
-            },
-        )
+        msg = render_error_with_hints("graphql_syntax_error", str(e), hints)
+        raise ToolError(msg) from e
     try:
         compiled_filter = None if jq_filter is None else cast("Any", jq.compile(jq_filter))  # pyright: ignore[reportUnknownMemberType]
     except Exception as e:
-        return QueryResult.create_error(
-            message={"error_type": "filter_compile_error", "detail": str(e)},
-        )
+        msg = render_error_with_hints("filter_compile_error", str(e))
+        raise ToolError(msg) from e
 
     transport = AIOHTTPTransport(
         url=str(settings.api_endpoint),
@@ -98,36 +97,30 @@ async def execute_graphql_query(
     except TransportQueryError as e:
         schema = await _get_cached_schema_safe()
         errors = e.errors or []
-        return QueryResult.create_error(
-            message={
-                "error_type": "graphql_query_error",
-                "errors": errors,
-                "hints": build_hints(errors, schema),
-                "partial_data": e.data,
-            },
+        msg = render_error_with_hints(
+            "graphql_query_error",
+            "Query failed against the Open Targets server.",
+            build_hints(errors, schema),
         )
+        raise ToolError(msg) from e
     except TransportServerError as e:
-        return QueryResult.create_error(
-            message={"error_type": "server_error", "detail": str(e)},
-        )
+        msg = render_error_with_hints("server_error", str(e))
+        raise ToolError(msg) from e
     except TransportProtocolError as e:
-        return QueryResult.create_error(
-            message={"error_type": "protocol_error", "detail": str(e)},
-        )
+        msg = render_error_with_hints("protocol_error", str(e))
+        raise ToolError(msg) from e
     except TransportConnectionFailed as e:
-        return QueryResult.create_error(
-            message={"error_type": "connection_error", "detail": str(e)},
-        )
+        msg = render_error_with_hints("connection_error", str(e))
+        raise ToolError(msg) from e
     except asyncio.TimeoutError as e:
-        return QueryResult.create_error(
-            message={"error_type": "timeout", "detail": str(e)},
-        )
+        msg = render_error_with_hints("timeout", str(e))
+        raise ToolError(msg) from e
 
     if compiled_filter:
         try:
             filtered_results = cast("list[Any]", compiled_filter.input_value(result).all())
             return QueryResult.create_success(filtered_results)
-        except Exception as jq_error:
+        except Exception as jq_error:  # noqa: BLE001 - jq raises bare Exception subclasses
             return QueryResult.create_warning(
                 result,
                 f"jq filter failed: {jq_error!s}. "

@@ -3,6 +3,7 @@
 import asyncio
 from typing import Annotated, Any
 
+from fastmcp.exceptions import ToolError
 from pydantic import Field
 
 from open_targets_platform_mcp.client.graphql import execute_graphql_query
@@ -34,7 +35,14 @@ async def _handle_single_query(
             )
         else:
             key = str(variables[key_field])
-            result = await execute_graphql_query(query_string, variables, jq_filter=jq_filter)
+            # Per-item `ToolError` raised by `execute_graphql_query` is caught
+            # here so a single bad query does not fail the entire batch via
+            # `asyncio.gather`. Each failure becomes a `QueryResult.ERROR` entry
+            # in the batch result, alongside successes from sibling items.
+            try:
+                result = await execute_graphql_query(query_string, variables, jq_filter=jq_filter)
+            except ToolError as e:
+                result = QueryResult.create_error(message=str(e), variables=variables)
             if result.status in (QueryResultStatus.ERROR, QueryResultStatus.WARNING):
                 result = result.model_copy(update={"variables": variables})
 

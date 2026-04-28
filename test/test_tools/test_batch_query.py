@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from fastmcp.exceptions import ToolError
 
 from open_targets_platform_mcp.model.result import BatchQueryResult, QueryResult, QueryResultStatus
 from open_targets_platform_mcp.tools.batch_query.batch_query import _batch_query_impl
@@ -91,14 +92,17 @@ class TestBatchQueryOpenTargetsGraphQL:
 
     @pytest.mark.asyncio
     async def test_batch_query_partial_failures(self, batch_query_string, batch_variables_with_key):
-        """Test batch query with some queries failing."""
+        """Test batch query with some queries raising ToolError."""
+        # `execute_graphql_query` now raises `ToolError` for transport / validation
+        # failures; `_handle_single_query` catches it and converts to a per-item
+        # `QueryResult.create_error` so sibling items can still complete.
         with patch(
             "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_query",
             new_callable=AsyncMock,
         ) as mock_execute:
             mock_execute.side_effect = [
                 QueryResult.create_success({"target": {"id": "ENSG00000141510"}}),
-                QueryResult.create_error("Query failed"),
+                ToolError("Query failed"),
                 QueryResult.create_success({"target": {"id": "ENSG00000139618"}}),
             ]
 
@@ -113,9 +117,11 @@ class TestBatchQueryOpenTargetsGraphQL:
         assert result.summary.successful == 2
         assert result.summary.failed == 1
 
-        # Check the failed query result
+        # Check the failed query result carries the ToolError message verbatim
         result_dict = {r.key: r for r in result.results if r.key is not None}
-        assert result_dict["ENSG00000012048"].result.status == QueryResultStatus.ERROR
+        failed = result_dict["ENSG00000012048"]
+        assert failed.result.status == QueryResultStatus.ERROR
+        assert "Query failed" in str(failed.result.message)
 
     @pytest.mark.asyncio
     async def test_batch_query_with_jq_filter(self, batch_query_string, batch_variables_with_key):
@@ -179,14 +185,14 @@ class TestBatchQueryOpenTargetsGraphQL:
 
     @pytest.mark.asyncio
     async def test_batch_query_exception_handling(self, batch_query_string, batch_variables_with_key):
-        """Test that error results during individual query execution are handled."""
+        """Test that ToolError raised by a single item is contained to that item."""
         with patch(
             "open_targets_platform_mcp.tools.batch_query.batch_query.execute_graphql_query",
             new_callable=AsyncMock,
         ) as mock_execute:
             mock_execute.side_effect = [
                 QueryResult.create_success({"target": {"id": "ENSG00000141510"}}),
-                QueryResult.create_error("Network error"),
+                ToolError("Network error"),
                 QueryResult.create_success({"target": {"id": "ENSG00000139618"}}),
             ]
 
