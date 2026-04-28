@@ -15,13 +15,16 @@ from __future__ import annotations
 
 import difflib
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from graphql import (
     GraphQLInterfaceType,
     GraphQLObjectType,
     GraphQLSchema,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Cap on `available_fields` / `available_arguments` lists. The Query root type
 # has many fields; without a cap a single hint balloons the response payload.
@@ -350,3 +353,162 @@ def _get_argument_names(
         return None
     field = type_def.fields.get(field_name)
     return None if field is None else list(field.args.keys())
+
+
+# How many `available_fields` to show inline when rendering a
+# missing-subselection hint as prose. Past this, the agent should call
+# `get_open_targets_graphql_schema` for the full list.
+_AVAILABLE_FIELDS_PROSE_CAP = 5
+
+# Slug -> human-readable label for the `error_type` codes raised by
+# `client.graphql.execute_graphql_query`. Anything not in the map renders as
+# its raw slug, which still parses as readable enough.
+_ERROR_TYPE_LABELS: dict[str, str] = {
+    "graphql_syntax_error": "GraphQL syntax error",
+    "graphql_query_error": "GraphQL query error",
+    "server_error": "Open Targets server error",
+    "protocol_error": "GraphQL protocol error",
+    "connection_error": "Connection failed",
+    "timeout": "Request timed out",
+    "filter_compile_error": "jq filter compile error",
+}
+
+
+def render_hints_as_prose(hints: list[dict[str, Any]]) -> str:
+    """Render hint dicts (output of `build_hints`) as a `  - ` bullet list.
+
+    Returns "" when `hints` is empty so callers can decide whether to append
+    a "Hints:" section. One bullet per hint; category-specific formatting.
+    Best-effort: a malformed hint falls back to a passthrough bullet rather
+    than raising, mirroring `build_hints`.
+    """
+    if not hints:
+        return ""
+    lines: list[str] = []
+    for hint in hints:
+        try:
+            line = _render_one_hint(hint)
+        except Exception:
+            line = f"Unrecognised hint: {hint!r}"
+        if line:
+            lines.append(f"  - {line}")
+    return "\n".join(lines)
+
+
+def render_error_with_hints(
+    error_type: str,
+    detail: str,
+    hints: list[dict[str, Any]] | None = None,
+) -> str:
+    """Compose a `<label>: <detail>` line, then optionally a Hints section.
+
+    Used by `client.graphql.execute_graphql_query` to format the message
+    string passed to `ToolError(...)`. The output reaches LLM agents as the
+    text content of the tool response, so it's optimised for readability.
+    """
+    label = _ERROR_TYPE_LABELS.get(error_type, error_type)
+    body = f"{label}: {detail}"
+    if hints:
+        prose = render_hints_as_prose(hints)
+        if prose:
+            body = f"{body}\n\nHints:\n{prose}"
+    return body
+
+
+def _render_one_hint(hint: dict[str, Any]) -> str:
+    category = hint.get("category", "unrecognized")
+    renderer = _PROSE_RENDERERS.get(category, _render_unrecognized)
+    return renderer(hint)
+
+
+def _did_you_mean_suffix(hint: dict[str, Any]) -> str:
+    raw = hint.get("did_you_mean")
+    if not raw:
+        return ""
+    # `build_hints` always emits `did_you_mean` as `list[str]`; the cast
+    # tells the type checker that. A malformed value would fail in `join`
+    # below and be swallowed by the outer try/except in `render_hints_as_prose`.
+    dym = cast("list[str]", raw)
+    return f" Did you mean: {', '.join(dym)}?"
+
+
+def _render_unknown_field(hint: dict[str, Any]) -> str:
+    field = hint.get("field") or "?"
+    type_name = hint.get("type") or "?"
+    return f"Field '{field}' does not exist on type '{type_name}'.{_did_you_mean_suffix(hint)}"
+
+
+def _render_unknown_root_query(hint: dict[str, Any]) -> str:
+    field = hint.get("field") or "?"
+    return f"'{field}' is not a top-level Query field.{_did_you_mean_suffix(hint)}"
+
+
+def _render_unknown_argument(hint: dict[str, Any]) -> str:
+    arg = hint.get("argument") or "?"
+    field = hint.get("field") or "?"
+    type_name = hint.get("type") or "?"
+    return (
+        f"Argument '{arg}' is not valid on field '{field}' (type {type_name})."
+        f"{_did_you_mean_suffix(hint)}"
+    )
+
+
+def _render_missing_required_argument(hint: dict[str, Any]) -> str:
+    field = hint.get("field") or "?"
+    arg = hint.get("argument") or "?"
+    type_name = hint.get("type") or "?"
+    return f"Field '{field}' requires argument '{arg}' (type {type_name})."
+
+
+def _render_missing_subselection(hint: dict[str, Any]) -> str:
+    field = hint.get("field") or "?"
+    type_name = hint.get("type") or "?"
+    inner_type = hint.get("inner_type") or "?"
+    base = f"Field '{field}' (type {type_name}) requires a sub-selection."
+    raw_available = hint.get("available_fields")
+    if not raw_available:
+        return base
+    # `build_hints` always emits `available_fields` as `list[str]`.
+    available = cast("list[str]", raw_available)
+    sample = ", ".join(available[:_AVAILABLE_FIELDS_PROSE_CAP])
+    truncated = (
+        len(available) > _AVAILABLE_FIELDS_PROSE_CAP
+        or bool(hint.get("available_fields_truncated"))
+    )
+    if truncated:
+        sample = f"{sample}, ..."
+    return f"{base} Available fields on {inner_type}: {sample}."
+
+
+def _render_variable_type_mismatch(hint: dict[str, Any]) -> str:
+    var = hint.get("variable") or "?"
+    got = hint.get("got") or "?"
+    want = hint.get("want") or "?"
+    return f"Variable ${var} is of type {got} but used where {want} is expected."
+
+
+def _render_undeclared_variable(hint: dict[str, Any]) -> str:
+    txt = hint.get("hint")
+    if isinstance(txt, str) and txt:
+        return txt
+    var = hint.get("variable") or "?"
+    return f"Variable ${var} is used but not declared in the operation signature."
+
+
+def _render_unrecognized(hint: dict[str, Any]) -> str:
+    raw = hint.get("raw_message")
+    if isinstance(raw, str) and raw:
+        return raw
+    return "Unrecognised GraphQL error."
+
+
+_PROSE_RENDERERS: dict[str, Callable[[dict[str, Any]], str]] = {
+    "unknown_field": _render_unknown_field,
+    "unknown_root_query": _render_unknown_root_query,
+    "unknown_argument": _render_unknown_argument,
+    "missing_required_argument": _render_missing_required_argument,
+    "missing_subselection": _render_missing_subselection,
+    "variable_type_mismatch": _render_variable_type_mismatch,
+    "undeclared_variable": _render_undeclared_variable,
+    "unrecognized": _render_unrecognized,
+}
