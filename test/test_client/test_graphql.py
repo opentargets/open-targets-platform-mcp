@@ -13,11 +13,11 @@ from open_targets_platform_mcp.model.result import QueryResultStatus
 @pytest.fixture(autouse=True)
 def reset_graphql_session():
     """Reset the global gql session between tests."""
-    graphql_module._runtime_state["client"] = None
-    graphql_module._runtime_state["session"] = None
+    graphql_module._runtime_state.client = None
+    graphql_module._runtime_state.session = None
     yield
-    graphql_module._runtime_state["client"] = None
-    graphql_module._runtime_state["session"] = None
+    graphql_module._runtime_state.client = None
+    graphql_module._runtime_state.session = None
 
 
 def _make_mock_session(return_value=None, side_effect=None):
@@ -71,8 +71,9 @@ class TestExecuteGraphQLQuery:
 
         assert result.status == QueryResultStatus.SUCCESS
         mock_session.execute.assert_awaited_once()
-        _, kwargs = mock_session.execute.call_args
-        assert kwargs["variable_values"] == sample_variables
+        (request,), kwargs = mock_session.execute.call_args
+        assert kwargs == {}
+        assert request.variable_values == sample_variables
 
     @pytest.mark.asyncio
     async def test_execute_query_invalid_query_string(self):

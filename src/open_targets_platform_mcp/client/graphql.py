@@ -10,14 +10,16 @@ from graphql import GraphQLSchema
 from open_targets_platform_mcp.model.result import QueryResult
 from open_targets_platform_mcp.settings import settings
 
-_runtime_state: dict[str, Client | AsyncClientSession | None] = {
-    "client": None,
-    "session": None,
-}
+
+class _RuntimeState:
+    client: Client | None = None
+    session: AsyncClientSession | None = None
+
+
+_runtime_state: _RuntimeState = _RuntimeState()
 
 
 def _create_graphql_client(*, fetch_schema_from_transport: bool = False) -> Client:
-    """Create a configured gql client for the Open Targets endpoint."""
     transport = AIOHTTPTransport(
         url=str(settings.api_endpoint),
         headers={
@@ -29,16 +31,13 @@ def _create_graphql_client(*, fetch_schema_from_transport: bool = False) -> Clie
 
 
 async def _get_global_graphql_session() -> AsyncClientSession:
-    """Return a process-wide gql session for the app lifetime."""
-    session = cast("AsyncClientSession | None", _runtime_state["session"])
-    if session is None:
+    if _runtime_state.session is None:
         client = _create_graphql_client()
         connected_session = await client.connect_async()  # pyright: ignore[reportUnknownMemberType]
-        _runtime_state["client"] = client
-        _runtime_state["session"] = cast("AsyncClientSession", connected_session)
-        session = cast("AsyncClientSession", connected_session)
+        _runtime_state.client = client
+        _runtime_state.session = cast("AsyncClientSession", connected_session)
 
-    return session
+    return _runtime_state.session
 
 
 def _compile_jq_filter(jq_filter: str | None) -> object | None:
@@ -74,8 +73,8 @@ async def _execute_graphql_query_with_session(
 ) -> QueryResult:
     query = gql(query_string)
     compiled_filter = _compile_jq_filter(jq_filter)
-
-    result = await session.execute(query, variable_values=variables)
+    request = GraphQLRequest(query, variable_values=variables)
+    result = await session.execute(request)
 
     return _result_with_optional_filter(result, compiled_filter, jq_filter)
 
@@ -89,8 +88,8 @@ async def _execute_graphql_batch_query_with_session(
     query = gql(query_string)
     compiled_filter = _compile_jq_filter(jq_filter)
     requests = [GraphQLRequest(query, variable_values=variables) for variables in variables_list]
-
     raw_results = await session.execute_batch(requests)
+
     return [_result_with_optional_filter(result, compiled_filter, jq_filter) for result in raw_results]
 
 
@@ -99,16 +98,7 @@ async def execute_graphql_query(
     variables: dict[str, Any] | None = None,
     jq_filter: str | None = None,
 ) -> QueryResult:
-    """Make a generic GraphQL API call and apply a jq filter to the result.
-
-    Args:
-        query_string (str): The GraphQL query or mutation as a string
-        variables (dict, optional): Variables for the GraphQL query
-        jq_filter (str, optional): jq filter to apply to the result
-
-    Returns:
-        QueryResult: The result of the GraphQL query
-    """
+    """Make a generic GraphQL API call and apply a jq filter to the result."""
     session = await _get_global_graphql_session()
     return await _execute_graphql_query_with_session(session, query_string, variables, jq_filter)
 
@@ -124,17 +114,7 @@ async def execute_graphql_batch_query(
 
 
 async def fetch_graphql_schema() -> GraphQLSchema:
-    """Fetch the GraphQL schema from the configured endpoint URL.
-
-    Uses the gql client's built-in schema fetching capability to retrieve
-    the schema automatically via introspection.
-
-    Returns:
-        str: The GraphQL schema in SDL (Schema Definition Language) format.
-
-    Raises:
-        ValueError: If the schema could not be fetched from the endpoint.
-    """
+    """Fetch the GraphQL schema from the configured endpoint URL."""
     # Create a client with schema fetching enabled.
     client = _create_graphql_client(fetch_schema_from_transport=True)
 
