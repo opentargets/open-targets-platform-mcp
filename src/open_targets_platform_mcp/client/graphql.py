@@ -11,6 +11,7 @@ from gql.transport.exceptions import (
     TransportServerError,
 )
 from graphql import GraphQLSchema
+from graphql.error import GraphQLError
 
 from open_targets_platform_mcp.client.error_hints import build_hints
 from open_targets_platform_mcp.model.result import QueryResult
@@ -58,9 +59,31 @@ async def execute_graphql_query(
             with `hints` derived from the live schema.
     """
     # Compile both the query and the jq filter before submitting a HTTP request
-    # to detect errors early.
-    query = gql(query_string)
-    compiled_filter = None if jq_filter is None else cast("Any", jq.compile(jq_filter))  # pyright: ignore[reportUnknownMemberType]
+    # to detect errors early. Pre-call compile failures are converted to
+    # structured `QueryResult.create_error(...)` payloads so they survive
+    # FastMCP's `mask_error_details=True` wrapper instead of being raised
+    # into the tool runner as opaque `ToolError`s.
+    try:
+        query = gql(query_string)
+    except GraphQLError as e:
+        schema = await _get_cached_schema_safe()
+        try:
+            hints = build_hints([{"message": str(e)}], schema)
+        except Exception:
+            hints = []
+        return QueryResult.create_error(
+            message={
+                "error_type": "graphql_syntax_error",
+                "detail": str(e),
+                "hints": hints,
+            },
+        )
+    try:
+        compiled_filter = None if jq_filter is None else cast("Any", jq.compile(jq_filter))  # pyright: ignore[reportUnknownMemberType]
+    except Exception as e:
+        return QueryResult.create_error(
+            message={"error_type": "filter_compile_error", "detail": str(e)},
+        )
 
     transport = AIOHTTPTransport(
         url=str(settings.api_endpoint),
