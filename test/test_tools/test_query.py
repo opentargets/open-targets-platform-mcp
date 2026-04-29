@@ -43,7 +43,7 @@ class TestQueryOpenTargetsGraphQL:
             result = await query_fn(sample_query_string)
 
         assert result.status == QueryResultStatus.SUCCESS
-        assert result.result == expected_data
+        assert result.data == expected_data
         mock_execute.assert_called_once_with(
             sample_query_string,
             None,
@@ -163,9 +163,9 @@ class TestQueryIntegration:
         result = await query_fn(query)
 
         assert result.status == QueryResultStatus.SUCCESS
-        assert result.result is not None
-        assert result.result["target"]["id"] == "ENSG00000141510"
-        assert result.result["target"]["approvedSymbol"] == "TP53"
+        assert result.data is not None
+        assert result.data["target"]["id"] == "ENSG00000141510"
+        assert result.data["target"]["approvedSymbol"] == "TP53"
 
     @pytest.mark.asyncio
     async def test_real_query_with_dict_variables(self):
@@ -182,9 +182,9 @@ class TestQueryIntegration:
         result = await query_fn(query, variables={"ensemblId": "ENSG00000012048"})
 
         assert result.status == QueryResultStatus.SUCCESS
-        assert result.result is not None
-        assert result.result["target"]["id"] == "ENSG00000012048"
-        assert result.result["target"]["approvedSymbol"] == "BRCA1"
+        assert result.data is not None
+        assert result.data["target"]["id"] == "ENSG00000012048"
+        assert result.data["target"]["approvedSymbol"] == "BRCA1"
 
     @pytest.mark.asyncio
     async def test_real_query_with_jq_filter(self):
@@ -207,15 +207,15 @@ class TestQueryIntegration:
             result = await query_fn(query, jq_filter=".target | {id, symbol: .approvedSymbol}")
 
             assert result.status == QueryResultStatus.SUCCESS
-            assert result.result is not None
+            assert result.data is not None
             # jq filter returns a list when processing the result
-            assert isinstance(result.result, list)
-            assert len(result.result) == 1
-            assert isinstance(result.result[0], dict)
-            assert "id" in result.result[0]
-            assert "symbol" in result.result[0]
-            assert result.result[0]["id"] == "ENSG00000141510"
-            assert result.result[0]["symbol"] == "TP53"
+            assert isinstance(result.data, list)
+            assert len(result.data) == 1
+            assert isinstance(result.data[0], dict)
+            assert "id" in result.data[0]
+            assert "symbol" in result.data[0]
+            assert result.data[0]["id"] == "ENSG00000141510"
+            assert result.data[0]["symbol"] == "TP53"
         finally:
             # Restore original value
             settings.jq_enabled = original_jq_enabled

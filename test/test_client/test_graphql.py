@@ -27,7 +27,7 @@ class TestExecuteGraphQLQuery:
                 result = await execute_graphql_query(sample_query_string)
 
         assert result.status == QueryResultStatus.SUCCESS
-        assert result.result == sample_graphql_response
+        assert result.data == sample_graphql_response
         mock_client_instance.execute_async.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -109,8 +109,8 @@ class TestJQFiltering:
 
         # jq filter returns a list (even for single results)
         assert result.status == QueryResultStatus.SUCCESS
-        assert isinstance(result.result, list)
-        assert result.result == ["ENSG00000141510"]
+        assert isinstance(result.data, list)
+        assert result.data == ["ENSG00000141510"]
         mock_client_instance.execute_async.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -132,13 +132,13 @@ class TestJQFiltering:
 
         # jq filter returns a list (even for single results)
         assert result.status == QueryResultStatus.SUCCESS
-        assert isinstance(result.result, list)
-        assert len(result.result) == 1
-        assert isinstance(result.result[0], dict)
-        assert "id" in result.result[0]
-        assert "symbol" in result.result[0]
-        assert result.result[0]["id"] == "ENSG00000141510"
-        assert result.result[0]["symbol"] == "TP53"
+        assert isinstance(result.data, list)
+        assert len(result.data) == 1
+        assert isinstance(result.data[0], dict)
+        assert "id" in result.data[0]
+        assert "symbol" in result.data[0]
+        assert result.data[0]["id"] == "ENSG00000141510"
+        assert result.data[0]["symbol"] == "TP53"
         mock_client_instance.execute_async.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -160,8 +160,8 @@ class TestJQFiltering:
 
         # Multiple results should be in result list
         assert result.status == QueryResultStatus.SUCCESS
-        assert isinstance(result.result, list)
-        assert result.result == ["TP53", "BRCA1"]
+        assert isinstance(result.data, list)
+        assert result.data == ["TP53", "BRCA1"]
         mock_client_instance.execute_async.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -185,7 +185,7 @@ class TestJQFiltering:
 
         # Should return warning with original data
         assert result.status == QueryResultStatus.WARNING
-        assert result.result == mock_response
+        assert result.data == mock_response
         assert "jq filter failed" in str(result.message)
         assert "// empty" in str(result.message)  # Should suggest null handling
         mock_client_instance.execute_async.assert_awaited_once()
@@ -211,7 +211,7 @@ class TestJQFiltering:
                 result = await execute_graphql_query(sample_query_string)
 
         assert result.status == QueryResultStatus.SUCCESS
-        assert result.result == sample_graphql_response
+        assert result.data == sample_graphql_response
         mock_client_instance.execute_async.assert_awaited_once()
 
 
@@ -239,9 +239,9 @@ class TestGraphQLIntegration:
         result = await execute_graphql_query(query)
 
         assert result.status == QueryResultStatus.SUCCESS
-        assert "target" in result.result
-        assert result.result["target"]["id"] == "ENSG00000141510"
-        assert result.result["target"]["approvedSymbol"] == "TP53"
+        assert "target" in result.data
+        assert result.data["target"]["id"] == "ENSG00000141510"
+        assert result.data["target"]["approvedSymbol"] == "TP53"
 
     @pytest.mark.asyncio
     async def test_real_query_with_variables(self):
@@ -259,8 +259,8 @@ class TestGraphQLIntegration:
         result = await execute_graphql_query(query, variables=variables)
 
         assert result.status == QueryResultStatus.SUCCESS
-        assert result.result["target"]["id"] == "ENSG00000012048"
-        assert result.result["target"]["approvedSymbol"] == "BRCA1"
+        assert result.data["target"]["id"] == "ENSG00000012048"
+        assert result.data["target"]["approvedSymbol"] == "BRCA1"
 
     @pytest.mark.asyncio
     async def test_real_query_with_jq_filter(self):
@@ -279,8 +279,8 @@ class TestGraphQLIntegration:
 
         assert result.status == QueryResultStatus.SUCCESS
         # jq filter returns a list (even for single results)
-        assert isinstance(result.result, list)
-        assert result.result == ["TP53"]
+        assert isinstance(result.data, list)
+        assert result.data == ["TP53"]
 
     @pytest.mark.asyncio
     async def test_real_invalid_query(self):

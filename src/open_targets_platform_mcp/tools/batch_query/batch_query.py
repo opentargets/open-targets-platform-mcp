@@ -9,7 +9,7 @@ from open_targets_platform_mcp.client.graphql import execute_graphql_query
 from open_targets_platform_mcp.model.result import (
     BatchQueryResult,
     BatchQuerySingleResult,
-    BatchQuerySummary,
+    BatchQueryStatusCounts,
     QueryResult,
     QueryResultStatus,
 )
@@ -38,7 +38,7 @@ async def _handle_single_query(
             if result.status in (QueryResultStatus.ERROR, QueryResultStatus.WARNING):
                 result = result.model_copy(update={"variables": variables})
 
-        return BatchQuerySingleResult(index=index, key=key, result=result)
+        return BatchQuerySingleResult(index=index, id=key, result=result)
 
 
 async def _batch_query_impl(
@@ -61,7 +61,7 @@ async def _batch_query_impl(
     results = await asyncio.gather(*tasks)
     return BatchQueryResult(
         results=results,
-        summary=BatchQuerySummary(
+        status_counts=BatchQueryStatusCounts(
             total=len(variables_list),
             successful=len([result for result in results if result.result.status == QueryResultStatus.SUCCESS]),
             failed=len([result for result in results if result.result.status == QueryResultStatus.ERROR]),
