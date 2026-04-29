@@ -6,6 +6,7 @@ from gql.client import AsyncClientSession
 from gql.transport.aiohttp import AIOHTTPTransport
 from graphql import GraphQLSchema
 
+from open_targets_platform_mcp.model.exception import JqCompilationError
 from open_targets_platform_mcp.model.result import QueryResult
 from open_targets_platform_mcp.settings import settings
 
@@ -40,10 +41,16 @@ async def _get_global_graphql_session() -> AsyncClientSession:
 
 
 def _compile_jq_filter(jq_filter: str | None) -> object | None:
-    return None if jq_filter is None else cast("Any", jq.compile(jq_filter))  # pyright: ignore[reportUnknownMemberType]
+    if jq_filter is None:
+        return None
+
+    try:
+        return cast("Any", jq.compile(jq_filter))  # pyright: ignore[reportUnknownMemberType]
+    except Exception as e:
+        raise JqCompilationError(e) from e
 
 
-def _result_with_optional_filter(
+def _apply_optional_filter(
     result: object,
     compiled_filter: object | None,
     jq_filter: str | None,
@@ -60,23 +67,8 @@ def _result_with_optional_filter(
                 "Tip: Use '// empty' or '// []' to handle null values. "
                 f"Example: '{jq_filter} // empty'",
             )
-
-    return QueryResult.create_success(result)
-
-
-async def _execute_graphql_query_with_session(
-    session: AsyncClientSession,
-    query_string: str,
-    variables: dict[str, Any] | None = None,
-    jq_filter: str | None = None,
-) -> QueryResult:
-    query = gql(query_string)
-    compiled_filter = _compile_jq_filter(jq_filter)
-    request = GraphQLRequest(query, variable_values=variables)
-
-    result = await session.execute(request)
-
-    return _result_with_optional_filter(result, compiled_filter, jq_filter)
+    else:
+        return QueryResult.create_success(result)
 
 
 async def execute_graphql_query(
@@ -85,8 +77,19 @@ async def execute_graphql_query(
     jq_filter: str | None = None,
 ) -> QueryResult:
     """Make a generic GraphQL API call and apply a jq filter to the result."""
-    session = await _get_global_graphql_session()
-    return await _execute_graphql_query_with_session(session, query_string, variables, jq_filter)
+    try:
+        session = await _get_global_graphql_session()
+        query = gql(query_string)
+        compiled_filter = _compile_jq_filter(jq_filter)
+        request = GraphQLRequest(query, variable_values=variables)
+        result = await session.execute(request)
+        result = _apply_optional_filter(result, compiled_filter, jq_filter)
+    except Exception as exception:
+        result = QueryResult.create_error(
+            str(exception),
+            error_type=type(exception).__name__,
+        )
+    return result
 
 
 async def fetch_graphql_schema() -> GraphQLSchema:
