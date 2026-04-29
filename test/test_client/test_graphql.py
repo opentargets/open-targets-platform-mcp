@@ -77,27 +77,28 @@ class TestExecuteGraphQLQuery:
 
     @pytest.mark.asyncio
     async def test_execute_query_invalid_query_string(self):
-        """Test that invalid GraphQL query string errors bubble up."""
+        """Test that invalid GraphQL query strings return structured errors."""
         invalid_query = "this is not valid graphql"
 
         with patch("open_targets_platform_mcp.client.graphql.gql", side_effect=Exception("Parse error")):
-            with pytest.raises(Exception, match="Parse error"):
-                await execute_graphql_query(invalid_query)
+            result = await execute_graphql_query(invalid_query)
+
+        assert result.status == QueryResultStatus.ERROR
+        assert "Parse error" in str(result.message)
 
     @pytest.mark.asyncio
     async def test_execute_query_execution_error(self, sample_query_string):
-        """Test that query execution errors bubble up."""
+        """Test that query execution errors return structured errors."""
         mock_session = _make_mock_session(side_effect=Exception("Network error"))
 
-        with (
-            patch(
-                "open_targets_platform_mcp.client.graphql._get_global_graphql_session",
-                return_value=mock_session,
-            ),
-            pytest.raises(Exception, match="Network error"),
+        with patch(
+            "open_targets_platform_mcp.client.graphql._get_global_graphql_session",
+            return_value=mock_session,
         ):
-            await execute_graphql_query(sample_query_string)
+            result = await execute_graphql_query(sample_query_string)
 
+        assert result.status == QueryResultStatus.ERROR
+        assert "Network error" in str(result.message)
         mock_session.execute.assert_awaited_once()
 
 
@@ -201,7 +202,7 @@ class TestJQFiltering:
             ),
             patch("open_targets_platform_mcp.client.graphql.jq.compile") as mock_jq_compile,
         ):
-            mock_compiled_filter = AsyncMock()
+            mock_compiled_filter = Mock()
             mock_compiled_filter.input_value.return_value.all.side_effect = Exception("jq execution error")
             mock_jq_compile.return_value = mock_compiled_filter
 
@@ -215,13 +216,15 @@ class TestJQFiltering:
 
     @pytest.mark.asyncio
     async def test_execute_query_jq_compilation_error(self, sample_query_string):
-        """Test that jq compilation errors bubble up."""
+        """Test that jq compilation errors return structured errors."""
         # Mock jq.compile to raise an error during compilation
         with patch("open_targets_platform_mcp.client.graphql.jq.compile") as mock_jq:
             mock_jq.side_effect = Exception("jq compilation error")
 
-            with pytest.raises(Exception, match="jq compilation error"):
-                await execute_graphql_query(sample_query_string, jq_filter=".invalid_filter")
+            result = await execute_graphql_query(sample_query_string, jq_filter=".invalid_filter")
+
+        assert result.status == QueryResultStatus.ERROR
+        assert "jq compilation error" in str(result.message)
 
     @pytest.mark.asyncio
     async def test_execute_query_no_jq_filter(self, sample_query_string, sample_graphql_response):
@@ -308,9 +311,7 @@ class TestGraphQLIntegration:
 
     @pytest.mark.asyncio
     async def test_real_invalid_query(self):
-        """Test that invalid query raises exception."""
-        from gql.transport.exceptions import TransportQueryError
-
+        """Test that invalid query returns error result."""
         invalid_query = """
         query {
             nonexistentField {
@@ -319,8 +320,8 @@ class TestGraphQLIntegration:
         }
         """
 
-        with pytest.raises(TransportQueryError):
-            await execute_graphql_query(invalid_query)
+        result = await execute_graphql_query(invalid_query)
+        assert result.status == QueryResultStatus.ERROR
 
 
 # ============================================================================
