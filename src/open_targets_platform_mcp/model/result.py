@@ -19,13 +19,17 @@ class QueryResult(BaseModel):
     )
     data: Any | None = Field(
         None,
-        description="The data returned by the query. Data could still be available even if the status is not success \
-            and it MUST be treated with caution as it may be INCOMPLETE or UNRELIABLE.",
+        description=(
+            "The data returned by the query. Data could still be available even if the status is not success "
+            "and it MUST be treated with caution as it may be INCOMPLETE or UNRELIABLE."
+        ),
     )
     message: str | None = Field(
         None,
-        description="The message associated with the query result. This field is typically used to provide additional \
-            information about the non-successful query result, such as error details or warnings.",
+        description=(
+            "The message associated with the query result. This field is typically used to provide additional "
+            "information about the non-successful query result, such as error details or warnings."
+        ),
     )
 
     @classmethod
@@ -48,8 +52,10 @@ class BatchQuerySingleResult(BaseModel):
     )
     id: str | None = Field(
         None,
-        description="The value of the variable designated by the client inside the variable set, to be used as the \
-            identifier for this result.",
+        description=(
+            "The value of the variable designated by the client inside the variable set, to be used as the "
+            "identifier for this result."
+        ),
     )
     result: QueryResult = Field(
         ...,
