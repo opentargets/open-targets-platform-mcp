@@ -15,7 +15,9 @@ jobs:
       attestations: write
       id-token: write
     env:
-      IMAGE_NAME: ${{ github.event.repository.name }}:${{ github.ref_name }}
+      CHANNEL_TAG: dev
+      REPO_FULL_NAME: ${{ github.repository }}
+      REPO_SHORT_NAME: ${{ github.event.repository.name }}
       GCP_REGISTRY_PROJECT_ID: open-targets-eu-dev
       GCP_SERVICE_PROJECT_ID: open-targets-mcp-dev
       GCP_REGION: europe-west1
@@ -25,8 +27,8 @@ jobs:
     steps:
       - id: set-envs
         run: |
-          echo "GITHUB_IMAGE_REF=${{ env.IMAGE_NAME }}" >> $GITHUB_ENV
-          echo "GOOGLE_IMAGE_REF=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_REGISTRY_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/${{ env.IMAGE_NAME }}" >> $GITHUB_ENV
+          echo "GITHUB_CHANNEL_IMAGE_REF=ghcr.io/${{ env.REPO_FULL_NAME }}:${{ env.CHANNEL_TAG }}" >> $GITHUB_ENV
+          echo "GOOGLE_CHANNEL_IMAGE_REF=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_REGISTRY_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/${{ env.REPO_SHORT_NAME }}:${{ env.CHANNEL_TAG }}" >> $GITHUB_ENV
     
       - uses: actions/checkout@v4
 
@@ -63,14 +65,14 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.GITHUB_IMAGE_REF }}
-            ${{ env.GOOGLE_IMAGE_REF }}
+            ${{ env.GITHUB_CHANNEL_IMAGE_REF }}
+            ${{ env.GOOGLE_CHANNEL_IMAGE_REF }}
 
       - id: generate-attestations
         name: Generate artifact attestation
         uses: actions/attest-build-provenance@v3
         with:
-          subject-name: ${{ env.GOOGLE_IMAGE_REF }}
+          subject-name: ${{ env.GOOGLE_CHANNEL_IMAGE_REF }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
 
@@ -90,4 +92,4 @@ jobs:
         with:
           service: ${{ env.GCP_SERVICE }}
           region: ${{ env.GCP_REGION }}
-          image: ${{ env.GOOGLE_IMAGE_REF }}
+          image: ${{ env.GOOGLE_CHANNEL_IMAGE_REF }}
