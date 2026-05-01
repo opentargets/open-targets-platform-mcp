@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from open_targets_platform_mcp.model.result import QueryResult, QueryResultStatus
+from open_targets_platform_mcp.model.query_result import QueryResult, QueryResultStatus
 from open_targets_platform_mcp.settings import settings
 from open_targets_platform_mcp.tools.query.query import _query_impl
 

@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from open_targets_platform_mcp.model.result import BatchQueryResult, QueryResult, QueryResultStatus
+from open_targets_platform_mcp.model.query_result import BatchQueryResult, QueryResult, QueryResultStatus
 from open_targets_platform_mcp.tools.batch_query.batch_query import _batch_query_impl
 
 # Use the internal implementation function directly for testing

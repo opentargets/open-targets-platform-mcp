@@ -5,7 +5,7 @@ from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 from graphql import GraphQLSchema
 
-from open_targets_platform_mcp.model.result import QueryResult
+from open_targets_platform_mcp.model.query_result import QueryResult
 from open_targets_platform_mcp.settings import settings
 
 

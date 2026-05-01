@@ -45,7 +45,7 @@ class QueryResult(BaseModel):
         return QueryResult(status=QueryResultStatus.WARNING, data=data, message=message, **kwargs)
 
 
-class BatchQuerySingleResult(BaseModel):
+class BatchQueryResultItem(BaseModel):
     index: int = Field(
         ...,
         description="Index of the input variable set associated with the query result.",
@@ -71,5 +71,5 @@ class BatchQueryStatusCounts(BaseModel):
 
 
 class BatchQueryResult(BaseModel):
-    results: list[BatchQuerySingleResult]
+    results: list[BatchQueryResultItem]
     status_counts: BatchQueryStatusCounts

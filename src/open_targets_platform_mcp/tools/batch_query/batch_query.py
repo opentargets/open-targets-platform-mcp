@@ -6,13 +6,14 @@ from typing import Annotated, Any
 from pydantic import Field
 
 from open_targets_platform_mcp.client.graphql import execute_graphql_query
-from open_targets_platform_mcp.model.result import (
+from open_targets_platform_mcp.model.query_result import (
     BatchQueryResult,
-    BatchQuerySingleResult,
+    BatchQueryResultItem,
     BatchQueryStatusCounts,
     QueryResult,
     QueryResultStatus,
 )
+from open_targets_platform_mcp.tools.helper import clone_function_with_removed_parameter
 
 
 async def _handle_single_query(
@@ -22,7 +23,7 @@ async def _handle_single_query(
     key_field: str,
     jq_filter: str | None,
     semaphore: asyncio.Semaphore,
-) -> BatchQuerySingleResult:
+) -> BatchQueryResultItem:
     async with semaphore:
         result: QueryResult | None = None
         key: str | None = None
@@ -38,7 +39,7 @@ async def _handle_single_query(
             if result.status in (QueryResultStatus.ERROR, QueryResultStatus.WARNING):
                 result = result.model_copy(update={"variables": variables})
 
-        return BatchQuerySingleResult(index=index, id=key, result=result)
+        return BatchQueryResultItem(index=index, id=key, result=result)
 
 
 async def _batch_query_impl(
@@ -46,11 +47,8 @@ async def _batch_query_impl(
     variables_list: list[dict[str, Any]],
     key_field: str,
     jq_filter: str | None = None,
-) -> BatchQueryResult | QueryResult:
+) -> BatchQueryResult:
     """Internal implementation - handles both jq-enabled and disabled modes."""
-    if not variables_list:
-        return QueryResult.create_error("variables_list cannot be empty")
-
     # serialising the execution for now before the GraphQL client cache is
     # implemented.
     semaphore = asyncio.Semaphore(1)
@@ -77,7 +75,10 @@ async def batch_query_with_jq(
     ],
     variables_list: Annotated[
         list[dict[Any, Any]],
-        Field(description="List of variables for each query execution"),
+        Field(
+            description="List of variables for each query execution",
+            min_length=1,
+        ),
     ],
     key_field: Annotated[
         str,
@@ -92,19 +93,4 @@ async def batch_query_with_jq(
     return await _batch_query_impl(query_string, variables_list, key_field, jq_filter)
 
 
-async def batch_query_without_jq(
-    query_string: Annotated[
-        str,
-        Field(description="GraphQL query string"),
-    ],
-    variables_list: Annotated[
-        list[dict[Any, Any]],
-        Field(description="List of variables for each query execution"),
-    ],
-    key_field: Annotated[
-        str,
-        Field(description="Variable field to use as result key"),
-    ],
-) -> BatchQueryResult | QueryResult:
-    """Batch query without jq support - signature excludes jq_filter."""
-    return await _batch_query_impl(query_string, variables_list, key_field, None)
+batch_query_without_jq = clone_function_with_removed_parameter(batch_query_with_jq, "jq_filter")

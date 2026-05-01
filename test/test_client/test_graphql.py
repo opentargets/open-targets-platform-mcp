@@ -6,7 +6,7 @@ import pytest
 from graphql import GraphQLSchema
 
 from open_targets_platform_mcp.client.graphql import execute_graphql_query, fetch_graphql_schema
-from open_targets_platform_mcp.model.result import QueryResultStatus
+from open_targets_platform_mcp.model.query_result import QueryResultStatus
 
 # ============================================================================
 # execute_graphql_query Tests - Unit Tests with Mocks
