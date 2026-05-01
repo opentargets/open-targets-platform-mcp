@@ -2,9 +2,7 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [ "main" ]
-    # Publish semver tags as releases.
-    tags: [ 'v*.*.*' ]
+    branches: [ "dev" ]
   workflow_dispatch:
 
 jobs:
@@ -17,21 +15,27 @@ jobs:
       attestations: write
       id-token: write
     env:
-      REPO: ${{ github.event.repository.name }}
-      GCP_PROJECT_ID: open-targets-eu-dev
+      IMAGE_NAME: ${{ github.event.repository.name }}:${{ github.ref_name }}
+      GCP_REGISTRY_PROJECT_ID: open-targets-eu-dev
+      GCP_SERVICE_PROJECT_ID: open-targets-mcp-dev
       GCP_REGION: europe-west1
       GCP_AR_REPO: platform-mcp
-      TAG: "${{ github.ref_name}}"
+      GCP_SERVICE: paul-test
 
     steps:
+      - id: set-envs
+        run: |
+          echo "GITHUB_IMAGE_REF=${{ env.IMAGE_NAME }}" >> $GITHUB_ENV
+          echo "GOOGLE_IMAGE_REF=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_REGISTRY_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/${{ env.IMAGE_NAME }}" >> $GITHUB_ENV
+    
       - uses: actions/checkout@v4
 
-      - id: auth-google
-        name: Authenticate to Google Cloud
+      - id: auth-google-registry
+        name: Authenticate to Google Cloud for Artifact Registry
         uses: google-github-actions/auth@v3
         with:
           token_format: access_token
-          project_id: ${{ env.GCP_PROJECT_ID }}
+          project_id: ${{ env.GCP_REGISTRY_PROJECT_ID }}
           workload_identity_provider: projects/426265110888/locations/global/workloadIdentityPools/github-actions/providers/opentargets
           service_account: github-actions@open-targets-eu-dev.iam.gserviceaccount.com
           access_token_lifetime: 300s
@@ -59,17 +63,31 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ env.TAG }}
-            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/${{ env.REPO }}:latest
-            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/${{ env.REPO }}:${{ env.TAG }}
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
+            ${{ env.GITHUB_IMAGE_REF }}
+            ${{ env.GOOGLE_IMAGE_REF }}
 
       - id: generate-attestations
         name: Generate artifact attestation
         uses: actions/attest-build-provenance@v3
         with:
-          subject-name: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/${{ env.REPO }}
+          subject-name: ${{ env.GOOGLE_IMAGE_REF }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+
+      - id: auth-google-deployment
+        name: Authenticate to Google Cloud for Deployment
+        uses: google-github-actions/auth@v3
+        with:
+          token_format: access_token
+          project_id: ${{ env.GCP_SERVICE_PROJECT_ID }}
+          workload_identity_provider: projects/426265110888/locations/global/workloadIdentityPools/github-actions/providers/opentargets
+          service_account: github-actions@open-targets-eu-dev.iam.gserviceaccount.com
+          access_token_lifetime: 300s
+
+      - id: deploy
+        name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.GCP_SERVICE }}
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.GOOGLE_IMAGE_REF }}
