@@ -83,7 +83,7 @@ jobs:
           token_format: access_token
           project_id: ${{ env.GCP_SERVICE_PROJECT_ID }}
           workload_identity_provider: projects/426265110888/locations/global/workloadIdentityPools/github-actions/providers/opentargets
-          service_account: github-actions@open-targets-eu-dev.iam.gserviceaccount.com
+          service_account: platform-mcp-dev@open-targets-mcp-dev.iam.gserviceaccount.com
           access_token_lifetime: 300s
 
       - id: deploy
