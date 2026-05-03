@@ -4,11 +4,11 @@ from typing import Annotated
 
 from pydantic import Field
 
-from open_targets_platform_mcp.model.query_result import BatchQueryResult, QueryResult
+from open_targets_platform_mcp.model.query_result import QueryResultStatus
+from open_targets_platform_mcp.model.search_entities_result import SearchEntitiesResultHit
 from open_targets_platform_mcp.tools.batch_query.batch_query import batch_query_with_jq
 
 VARIABLE_FIELD = "queryString"
-JQ_FILTER = ".search.hits[:3] | map({id, entity})"
 SEARCH_ENTITY_QUERY = """
 query searchEntity($queryString: String!) {
   search(queryString: $queryString) {
@@ -16,7 +16,6 @@ query searchEntity($queryString: String!) {
     hits {
       id
       entity
-      description
     }
   }
 }
@@ -34,15 +33,25 @@ async def search_entities(
             ],
         ),
     ],
-) -> BatchQueryResult | QueryResult:
+) -> Annotated[
+    dict[str, list[SearchEntitiesResultHit]],
+    Field(description="Search entities result"),
+]:
     batch_query_result = await batch_query_with_jq(
         SEARCH_ENTITY_QUERY,
         [{VARIABLE_FIELD: query_string} for query_string in query_strings],
         VARIABLE_FIELD,
-        JQ_FILTER,
     )
 
-    if isinstance(batch_query_result, QueryResult):
-        return batch_query_result
+    result = dict[str, list[SearchEntitiesResultHit]]()
+    for query_result in batch_query_result.results:
+        if query_result.id is None:
+            continue
+        query_string = query_result.id
+        entities = list[SearchEntitiesResultHit]()
+        if query_result.result.status == QueryResultStatus.SUCCESS and query_result.result.data is not None:
+            for hit in query_result.result.data.get("search", {}).get("hits", []):
+                entities.append(SearchEntitiesResultHit(entity_id=hit["id"], entity_type=hit["entity"]))
+        result[query_string] = entities
 
-    return batch_query_result
+    return result
