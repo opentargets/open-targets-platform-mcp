@@ -1,7 +1,9 @@
 """Server setup and configuration for Open Targets Platform MCP."""
 
 import base64
+from collections.abc import Callable
 from importlib import metadata, resources
+from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
@@ -20,6 +22,7 @@ from open_targets_platform_mcp.tools import (
     query_without_jq,
     search_entities,
 )
+from open_targets_platform_mcp.tools.helper import build_description
 from open_targets_platform_mcp.tools.schema.schema import build_schema_docstring
 
 
@@ -39,6 +42,18 @@ async def create_server() -> FastMCP:
         icons=[Icon(src=data_uri, mimeType="image/png")],
         mask_error_details=True,
     )
+
+    def register_tool(
+        func: Callable[..., Any],
+        name: str | None = None,
+        description_main_text: str | None = None,
+    ) -> None:
+        mcp.tool(
+            func,
+            name=name,
+            description=build_description(func, description_main_text),
+            annotations={"readOnlyHint": True},
+        )
 
     if settings.rate_limiting_enabled:
         mcp.add_middleware(
@@ -97,64 +112,59 @@ async def create_server() -> FastMCP:
     async def health_check(_: Request) -> JSONResponse:
         return JSONResponse({"status": "healthy", "service": "mcp-server"})
 
-    mcp.tool(
+    register_tool(
         get_open_targets_graphql_schema,
-        description=build_schema_docstring(),
-        annotations={"readOnlyHint": True},
+        description_main_text=build_schema_docstring(),
     )
-    mcp.tool(
+    register_tool(
         get_type_dependencies,
-        description=resources.files("open_targets_platform_mcp.tools.schema")
-        .joinpath("type_graph_description.txt")
+        description_main_text=resources.files("open_targets_platform_mcp.tools.schema")
+        .joinpath("type_graph_description.md")
         .read_text(encoding="utf-8"),
-        annotations={"readOnlyHint": True},
     )
-    mcp.tool(
+    register_tool(
         search_entities,
-        description=resources.files("open_targets_platform_mcp.tools.search_entities")
-        .joinpath("description.txt")
+        description_main_text=resources.files("open_targets_platform_mcp.tools.search_entities")
+        .joinpath("description.md")
         .read_text(encoding="utf-8"),
-        annotations={"readOnlyHint": True},
     )
 
     if settings.jq_enabled:
         query_function = query_with_jq
         query_description = (
             resources.files("open_targets_platform_mcp.tools.query")
-            .joinpath("with_jq_description.txt")
+            .joinpath("with_jq_description.md")
             .read_text(encoding="utf-8")
         )
         batch_query_function = batch_query_with_jq
         batch_query_description = (
             resources.files("open_targets_platform_mcp.tools.batch_query")
-            .joinpath("with_jq_description.txt")
+            .joinpath("with_jq_description.md")
             .read_text(encoding="utf-8")
         )
     else:
         query_function = query_without_jq
         query_description = (
             resources.files("open_targets_platform_mcp.tools.query")
-            .joinpath("without_jq_description.txt")
+            .joinpath("without_jq_description.md")
             .read_text(encoding="utf-8")
         )
         batch_query_function = batch_query_without_jq
         batch_query_description = (
             resources.files("open_targets_platform_mcp.tools.batch_query")
-            .joinpath("without_jq_description.txt")
+            .joinpath("without_jq_description.md")
             .read_text(encoding="utf-8")
         )
 
-    mcp.tool(
+    register_tool(
         query_function,
         name="query_open_targets_graphql",
-        description=query_description,
-        annotations={"readOnlyHint": True},
+        description_main_text=query_description,
     )
-    mcp.tool(
+    register_tool(
         batch_query_function,
         name="batch_query_open_targets_graphql",
-        description=batch_query_description,
-        annotations={"readOnlyHint": True},
+        description_main_text=batch_query_description,
     )
 
     return mcp
