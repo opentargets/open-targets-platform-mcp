@@ -3,8 +3,6 @@
 import asyncio
 from typing import Annotated, Any
 
-from pydantic import Field
-
 from open_targets_platform_mcp.client.graphql import execute_graphql_query
 from open_targets_platform_mcp.model.query_result import (
     BatchQueryResult,
@@ -71,24 +69,24 @@ async def _batch_query_impl(
 async def batch_query_with_jq(
     query_string: Annotated[
         str,
-        Field(description="GraphQL query string"),
+        "The GraphQL query string to execute for all variable sets.",
     ],
     variables_list: Annotated[
         list[dict[Any, Any]],
-        Field(
-            description="List of variables for each query execution",
-            min_length=1,
-        ),
+        "List of variable dictionaries, one per query execution.",
     ],
     key_field: Annotated[
         str,
-        Field(description="Variable field to use as result key"),
+        "Variable field name to use as key in results mapping.",
     ],
     jq_filter: Annotated[
         str | None,
-        Field(description="Optional jq filter applied to all results"),
+        "Optional jq filter applied identically and individually to all query results.",
     ] = None,
-) -> BatchQueryResult | QueryResult:
+) -> Annotated[
+    BatchQueryResult,
+    "Results keyed by the specified field value, with execution summary.",
+]:
     """Batch query with jq support - signature includes jq_filter."""
     return await _batch_query_impl(query_string, variables_list, key_field, jq_filter)
 

@@ -1,4 +1,7 @@
-Execute GraphQL queries against the Open Targets Platform API.
+Execute the same GraphQL query multiple times with different variable sets.
+
+Use this tool instead of the regular query tool when you need to run the same query
+repeatedly with different arguments (e.g., querying multiple drugs, targets, or diseases).
 
 WORKFLOW - Follow these steps in order:
 
@@ -6,12 +9,12 @@ Step 1: RESOLVE IDENTIFIERS
     If user provides common names (gene symbols, disease names, drug names),
     use `search_entity` tool FIRST to convert them to standardized IDs:
 
-    - Targets/Genes: "BRCA2" -> ENSEMBL ID "ENSG00000139618"
+    - Targets/Genes: "BRCA1", "BRCA2" -> ENSEMBL IDs "ENSG00000012048", "ENSG00000139618"
     - Diseases: "breast cancer" -> EFO/MONDO ID "MONDO_0007254"
-    - Drugs: "aspirin" -> ChEMBL ID "CHEMBL1201583"
+    - Drugs: "aspirin", "ibuprofen" -> ChEMBL IDs "CHEMBL1201583", "CHEMBL521"
     - Variants: Use "chr_pos_ref_alt" format or rsIDs
 
-    Example: search_entity(query_string="BRCA2", entity_names=["target"])
+    Example: search_entity(query_string="BRCA1 BRCA2", entity_names=["target"])
 
 Step 2: LEARN QUERY STRUCTURE
     Call `get_open_targets_graphql_schema` with relevant categories to retrieve
@@ -31,24 +34,13 @@ Step 2: LEARN QUERY STRUCTURE
     This tool provides exhaustive type dependency information but should only be
     used when category-based retrieval is insufficient.
 
-Step 3: CONSTRUCT QUERY WITH JQ FILTER
-    Build GraphQL query using:
+Step 3: CONSTRUCT AND EXECUTE BATCH QUERY
+    Build GraphQL query and variables_list using:
     - Standardized IDs from Step 1 (REQUIRED)
     - Query patterns from Step 2
     - Follow the "COMMON MISTAKES TO AVOID" guidance in the schema output
-    - jq filter for targeted information extraction
 
-    JQ FILTER REQUIREMENT:
-    When you're after specific information, ALWAYS include a jq_filter to return
-    ONLY the requested fields. This achieves parsimony by reducing token consumption
-    and response size. Never return the full API response when only specific fields
-    are needed.
-
-    The jq filter is applied server-side before the response is returned to you,
-    extracting only the relevant data and discarding unnecessary fields.
-
-Step 4: EXECUTE
-    Call this tool with query_string, variables, and jq_filter.
+    Call this tool with query_string, variables_list, and key_field.
 
 REQUIRED IDENTIFIER FORMATS:
 - Targets/Genes: ENSEMBL IDs (e.g., "ENSG00000139618")
@@ -57,12 +49,3 @@ REQUIRED IDENTIFIER FORMATS:
 - Variants: "chr_pos_ref_alt" format (e.g., "19_44908822_C_T") or rsIDs (e.g., "rs7412")
 - Studies: Study IDs (e.g., "GCST90002357")
 - Credible Sets: Study Locus IDs (e.g., "7d68cc9c70351c9dbd2a2c0c145e555d")
-
-Args:
-    query_string: GraphQL query starting with 'query' keyword
-    variables: Optional dict or JSON string with query variables
-    jq_filter: Optional jq expression to filter the response server-side
-
-Returns:
-    dict: GraphQL response with data field containing targets, diseases, drugs, variants,
-          studies or error message.

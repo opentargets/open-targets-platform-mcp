@@ -34,13 +34,24 @@ Step 2: LEARN QUERY STRUCTURE
     This tool provides exhaustive type dependency information but should only be
     used when category-based retrieval is insufficient.
 
-Step 3: CONSTRUCT AND EXECUTE BATCH QUERY
+Step 3: CONSTRUCT BATCH QUERY WITH JQ FILTER
     Build GraphQL query and variables_list using:
     - Standardized IDs from Step 1 (REQUIRED)
     - Query patterns from Step 2
     - Follow the "COMMON MISTAKES TO AVOID" guidance in the schema output
+    - jq filter for targeted information extraction
 
-    Call this tool with query_string, variables_list, and key_field.
+    JQ FILTER REQUIREMENT:
+    When you're after specific information, ALWAYS include a jq_filter to return
+    ONLY the requested fields. This achieves parsimony by reducing token consumption
+    and response size. Never return the full API response when only specific fields
+    are needed.
+
+    The jq filter is applied server-side to each query result before responses
+    are returned, extracting only the relevant data and discarding unnecessary fields.
+
+Step 4: EXECUTE
+    Call this tool with query_string, variables_list, key_field, and jq_filter.
 
 REQUIRED IDENTIFIER FORMATS:
 - Targets/Genes: ENSEMBL IDs (e.g., "ENSG00000139618")
@@ -49,19 +60,3 @@ REQUIRED IDENTIFIER FORMATS:
 - Variants: "chr_pos_ref_alt" format (e.g., "19_44908822_C_T") or rsIDs (e.g., "rs7412")
 - Studies: Study IDs (e.g., "GCST90002357")
 - Credible Sets: Study Locus IDs (e.g., "7d68cc9c70351c9dbd2a2c0c145e555d")
-
-Args:
-    query_string: The GraphQL query string to execute for all variable sets
-    variables_list: List of variable dictionaries, one per query execution
-    key_field: Variable field name to use as key in results mapping (e.g., "chemblId")
-
-Returns:
-    dict: Results keyed by the specified field value, with execution summary:
-        {
-            "status": "success",
-            "results": {
-                "<key_value>": {"status": "success", "data": ...},
-                ...
-            },
-            "summary": {"total": <int>, "successful": <int>, "failed": <int>}
-        }

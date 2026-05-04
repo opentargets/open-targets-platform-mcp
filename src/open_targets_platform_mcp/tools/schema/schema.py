@@ -15,9 +15,13 @@ async def get_open_targets_graphql_schema(
         Field(
             description="List of category names to filter the schema. "
             "Returns only types relevant to the specified categories.",
+            examples=[["drug-mechanisms"], ["target-safety", "drug-safety"]],
         ),
     ],
-) -> str:
+) -> Annotated[
+    str,
+    "The schema text in SDL (Schema Definition Language) format.",
+]:
     """Retrieve the Open Targets Platform GraphQL schema by category."""
     # Get subschemas for requested categories
     subschemas = await category_subschemas_cache.get()
@@ -77,11 +81,8 @@ def build_schema_docstring() -> str:
     """
     base_docstring = (
         resources.files("open_targets_platform_mcp.tools.schema")
-        .joinpath("schema_docstring_prefix.txt")
+        .joinpath("schema_docstring_prefix.md")
         .read_text(encoding="utf-8")
     )
     categories = get_categories_for_docstring()
-    return f"{base_docstring}\n{categories}\n"
-
-
-get_open_targets_graphql_schema.__doc__ = build_schema_docstring()
+    return f"{base_docstring}\n\n{categories}\n"
