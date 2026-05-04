@@ -1,12 +1,74 @@
 from typing import Any, cast
 
 import jq
-from gql import Client, gql
+from gql import Client, GraphQLRequest, gql
+from gql.client import AsyncClientSession
 from gql.transport.aiohttp import AIOHTTPTransport
 from graphql import GraphQLSchema
 
+from open_targets_platform_mcp.model.exception import JqCompilationError
 from open_targets_platform_mcp.model.result import QueryResult
 from open_targets_platform_mcp.settings import settings
+
+
+class _RuntimeState:
+    client: Client | None = None
+    session: AsyncClientSession | None = None
+
+
+_runtime_state: _RuntimeState = _RuntimeState()
+
+
+def _create_graphql_client(*, fetch_schema_from_transport: bool = False) -> Client:
+    transport = AIOHTTPTransport(
+        url=str(settings.api_endpoint),
+        headers={
+            "Content-Type": "application/json",
+        },
+        timeout=settings.api_call_timeout,
+    )
+    return Client(transport=transport, fetch_schema_from_transport=fetch_schema_from_transport)
+
+
+async def _get_global_graphql_session() -> AsyncClientSession:
+    if _runtime_state.session is None:
+        client = _create_graphql_client()
+        connected_session = await client.connect_async()  # pyright: ignore[reportUnknownMemberType]
+        _runtime_state.client = client
+        _runtime_state.session = cast("AsyncClientSession", connected_session)
+
+    return _runtime_state.session
+
+
+def _compile_jq_filter(jq_filter: str | None) -> object | None:
+    if jq_filter is None:
+        return None
+
+    try:
+        return cast("Any", jq.compile(jq_filter))  # pyright: ignore[reportUnknownMemberType]
+    except Exception as e:
+        raise JqCompilationError(e) from e
+
+
+def _apply_optional_filter(
+    result: object,
+    compiled_filter: object | None,
+    jq_filter: str | None,
+) -> QueryResult:
+    if compiled_filter:
+        try:
+            filter_program = cast("Any", compiled_filter)
+            filtered_results = cast("list[Any]", filter_program.input_value(result).all())
+            return QueryResult.create_success(filtered_results)
+        except Exception as jq_error:  # noqa: BLE001
+            return QueryResult.create_warning(
+                result,
+                f"jq filter failed: {jq_error!s}. "
+                "Tip: Use '// empty' or '// []' to handle null values. "
+                f"Example: '{jq_filter} // empty'",
+            )
+    else:
+        return QueryResult.create_success(result)
 
 
 async def execute_graphql_query(
@@ -14,68 +76,26 @@ async def execute_graphql_query(
     variables: dict[str, Any] | None = None,
     jq_filter: str | None = None,
 ) -> QueryResult:
-    """Make a generic GraphQL API call and apply a jq filter to the result.
-
-    Args:
-        query_string (str): The GraphQL query or mutation as a string
-        variables (dict, optional): Variables for the GraphQL query
-        jq_filter (str, optional): jq filter to apply to the result
-
-    Returns:
-        QueryResult: The result of the GraphQL query
-    """
-    # Compile both the query and the jq filter before submitting a HTTP request
-    # to detect errors early.
-    query = gql(query_string)
-    compiled_filter = None if jq_filter is None else cast("Any", jq.compile(jq_filter))  # pyright: ignore[reportUnknownMemberType]
-
-    transport = AIOHTTPTransport(
-        url=str(settings.api_endpoint),
-        headers={
-            "Content-Type": "application/json",
-        },
-        timeout=settings.api_call_timeout,
-    )
-    client = Client(transport=transport)
-    result = await client.execute_async(query, variable_values=variables)
-
-    if compiled_filter:
-        try:
-            filtered_results = cast("list[Any]", compiled_filter.input_value(result).all())
-            return QueryResult.create_success(filtered_results)
-        except Exception as jq_error:
-            return QueryResult.create_warning(
-                result,
-                f"jq filter failed: {jq_error!s}. "
-                "Tip: Use '// empty' or '// []' to handle null values. "
-                f"Example: '{jq_filter} // empty'",
-            )
-    return QueryResult.create_success(result)
+    """Make a generic GraphQL API call and apply a jq filter to the result."""
+    try:
+        session = await _get_global_graphql_session()
+        query = gql(query_string)
+        compiled_filter = _compile_jq_filter(jq_filter)
+        request = GraphQLRequest(query, variable_values=variables)
+        result = await session.execute(request)
+        result = _apply_optional_filter(result, compiled_filter, jq_filter)
+    except Exception as exception:
+        result = QueryResult.create_error(
+            str(exception),
+            error_type=type(exception).__name__,
+        )
+    return result
 
 
 async def fetch_graphql_schema() -> GraphQLSchema:
-    """Fetch the GraphQL schema from the configured endpoint URL.
-
-    Uses the gql client's built-in schema fetching capability to retrieve
-    the schema automatically via introspection.
-
-    Returns:
-        str: The GraphQL schema in SDL (Schema Definition Language) format.
-
-    Raises:
-        ValueError: If the schema could not be fetched from the endpoint.
-    """
-    # Create a transport with the GraphQL endpoint
-    transport = AIOHTTPTransport(
-        url=str(settings.api_endpoint),
-        headers={
-            "Content-Type": "application/json",
-        },
-        timeout=settings.api_call_timeout,
-    )
-
-    # Create a client with schema fetching enabled
-    client = Client(transport=transport, fetch_schema_from_transport=True)
+    """Fetch the GraphQL schema from the configured endpoint URL."""
+    # Create a client with schema fetching enabled.
+    client = _create_graphql_client(fetch_schema_from_transport=True)
 
     async with client:
         # The schema is automatically fetched and stored in the client

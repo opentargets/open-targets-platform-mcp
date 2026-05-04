@@ -4,12 +4,23 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from open_targets_platform_mcp.client import graphql as graphql_module
 from open_targets_platform_mcp.model.result import QueryResult, QueryResultStatus
 from open_targets_platform_mcp.settings import settings
 from open_targets_platform_mcp.tools.query.query import _query_impl
 
 # Use the internal implementation function directly for testing
 query_fn = _query_impl
+
+
+@pytest.fixture(autouse=True)
+def reset_graphql_session():
+    """Reset the global gql session between tests."""
+    graphql_module._runtime_state.client = None
+    graphql_module._runtime_state.session = None
+    yield
+    graphql_module._runtime_state.client = None
+    graphql_module._runtime_state.session = None
 
 
 class TestQueryOpenTargetsGraphQL:

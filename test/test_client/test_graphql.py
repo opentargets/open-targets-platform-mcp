@@ -5,8 +5,30 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from graphql import GraphQLSchema
 
+from open_targets_platform_mcp.client import graphql as graphql_module
 from open_targets_platform_mcp.client.graphql import execute_graphql_query, fetch_graphql_schema
 from open_targets_platform_mcp.model.result import QueryResultStatus
+
+
+@pytest.fixture(autouse=True)
+def reset_graphql_session():
+    """Reset the global gql session between tests."""
+    graphql_module._runtime_state.client = None
+    graphql_module._runtime_state.session = None
+    yield
+    graphql_module._runtime_state.client = None
+    graphql_module._runtime_state.session = None
+
+
+def _make_mock_session(return_value=None, side_effect=None):
+    """Return a mock AsyncClientSession with execute pre-configured."""
+    session = AsyncMock()
+    if side_effect is not None:
+        session.execute = AsyncMock(side_effect=side_effect)
+    else:
+        session.execute = AsyncMock(return_value=return_value)
+    return session
+
 
 # ============================================================================
 # execute_graphql_query Tests - Unit Tests with Mocks
@@ -19,16 +41,17 @@ class TestExecuteGraphQLQuery:
     @pytest.mark.asyncio
     async def test_execute_query_success(self, sample_query_string, sample_graphql_response):
         """Test successful query execution."""
-        mock_client_instance = AsyncMock()
-        mock_client_instance.execute_async = AsyncMock(return_value=sample_graphql_response)
+        mock_session = _make_mock_session(return_value=sample_graphql_response)
 
-        with patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"):
-            with patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance):
-                result = await execute_graphql_query(sample_query_string)
+        with patch(
+            "open_targets_platform_mcp.client.graphql._get_global_graphql_session",
+            return_value=mock_session,
+        ):
+            result = await execute_graphql_query(sample_query_string)
 
         assert result.status == QueryResultStatus.SUCCESS
         assert result.result == sample_graphql_response
-        mock_client_instance.execute_async.assert_awaited_once()
+        mock_session.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_execute_query_with_variables(
@@ -38,51 +61,58 @@ class TestExecuteGraphQLQuery:
         sample_graphql_response,
     ):
         """Test query execution with variables."""
-        mock_client_instance = AsyncMock()
-        mock_client_instance.execute_async = AsyncMock(return_value=sample_graphql_response)
+        mock_session = _make_mock_session(return_value=sample_graphql_response)
 
-        with patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"):
-            with patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance):
-                result = await execute_graphql_query(sample_query_string, variables=sample_variables)
+        with patch(
+            "open_targets_platform_mcp.client.graphql._get_global_graphql_session",
+            return_value=mock_session,
+        ):
+            result = await execute_graphql_query(sample_query_string, variables=sample_variables)
 
         assert result.status == QueryResultStatus.SUCCESS
-        mock_client_instance.execute_async.assert_awaited_once_with("parsed_query", variable_values=sample_variables)
-
-    @pytest.mark.asyncio
-    async def test_execute_query_default_headers(self, sample_query_string):
-        """Test that default headers are set when none provided."""
-        mock_client_instance = AsyncMock()
-        mock_client_instance.execute_async = AsyncMock(return_value={})
-
-        with patch("open_targets_platform_mcp.client.graphql.AIOHTTPTransport") as mock_transport:
-            with patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"):
-                with patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance):
-                    await execute_graphql_query(sample_query_string)
-
-        call_kwargs = mock_transport.call_args[1]
-        assert call_kwargs["headers"] == {"Content-Type": "application/json"}
+        mock_session.execute.assert_awaited_once()
+        (request,), kwargs = mock_session.execute.call_args
+        assert kwargs == {}
+        assert request.variable_values == sample_variables
 
     @pytest.mark.asyncio
     async def test_execute_query_invalid_query_string(self):
-        """Test that invalid GraphQL query string errors bubble up."""
+        """Test that invalid GraphQL query strings return structured errors."""
         invalid_query = "this is not valid graphql"
 
         with patch("open_targets_platform_mcp.client.graphql.gql", side_effect=Exception("Parse error")):
-            with pytest.raises(Exception, match="Parse error"):
-                await execute_graphql_query(invalid_query)
+            result = await execute_graphql_query(invalid_query)
+
+        assert result.status == QueryResultStatus.ERROR
+        assert "Parse error" in str(result.message)
 
     @pytest.mark.asyncio
     async def test_execute_query_execution_error(self, sample_query_string):
-        """Test that query execution errors bubble up."""
-        mock_client_instance = AsyncMock()
-        mock_client_instance.execute_async = AsyncMock(side_effect=Exception("Network error"))
+        """Test that query execution errors return structured errors."""
+        mock_session = _make_mock_session(side_effect=Exception("Network error"))
 
-        with patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"):
-            with patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance):
-                with pytest.raises(Exception, match="Network error"):
-                    await execute_graphql_query(sample_query_string)
+        with patch(
+            "open_targets_platform_mcp.client.graphql._get_global_graphql_session",
+            return_value=mock_session,
+        ):
+            result = await execute_graphql_query(sample_query_string)
 
-        mock_client_instance.execute_async.assert_awaited_once()
+        assert result.status == QueryResultStatus.ERROR
+        assert "Network error" in str(result.message)
+        mock_session.execute.assert_awaited_once()
+
+
+class TestTransportConstruction:
+    """Tests for transport/client construction."""
+
+    def test_create_client_sets_content_type_header(self):
+        """Test that _create_graphql_client uses the correct Content-Type header."""
+        with patch("open_targets_platform_mcp.client.graphql.AIOHTTPTransport") as mock_transport:
+            with patch("open_targets_platform_mcp.client.graphql.Client"):
+                graphql_module._create_graphql_client()
+
+        call_kwargs = mock_transport.call_args[1]
+        assert call_kwargs["headers"] == {"Content-Type": "application/json"}
 
 
 # ============================================================================
@@ -99,19 +129,18 @@ class TestJQFiltering:
         mock_response = {
             "target": {"id": "ENSG00000141510", "approvedSymbol": "TP53", "approvedName": "tumor protein p53"},
         }
+        mock_session = _make_mock_session(return_value=mock_response)
 
-        mock_client_instance = AsyncMock()
-        mock_client_instance.execute_async = AsyncMock(return_value=mock_response)
+        with patch(
+            "open_targets_platform_mcp.client.graphql._get_global_graphql_session",
+            return_value=mock_session,
+        ):
+            result = await execute_graphql_query(sample_query_string, jq_filter=".target.id")
 
-        with patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"):
-            with patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance):
-                result = await execute_graphql_query(sample_query_string, jq_filter=".target.id")
-
-        # jq filter returns a list (even for single results)
         assert result.status == QueryResultStatus.SUCCESS
         assert isinstance(result.result, list)
         assert result.result == ["ENSG00000141510"]
-        mock_client_instance.execute_async.assert_awaited_once()
+        mock_session.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_execute_query_with_complex_jq_filter(self, sample_query_string):
@@ -119,27 +148,24 @@ class TestJQFiltering:
         mock_response = {
             "target": {"id": "ENSG00000141510", "approvedSymbol": "TP53", "approvedName": "tumor protein p53"},
         }
+        mock_session = _make_mock_session(return_value=mock_response)
 
-        mock_client_instance = AsyncMock()
-        mock_client_instance.execute_async = AsyncMock(return_value=mock_response)
+        with patch(
+            "open_targets_platform_mcp.client.graphql._get_global_graphql_session",
+            return_value=mock_session,
+        ):
+            result = await execute_graphql_query(
+                sample_query_string,
+                jq_filter=".target | {id, symbol: .approvedSymbol}",
+            )
 
-        with patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"):
-            with patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance):
-                result = await execute_graphql_query(
-                    sample_query_string,
-                    jq_filter=".target | {id, symbol: .approvedSymbol}",
-                )
-
-        # jq filter returns a list (even for single results)
         assert result.status == QueryResultStatus.SUCCESS
         assert isinstance(result.result, list)
         assert len(result.result) == 1
         assert isinstance(result.result[0], dict)
-        assert "id" in result.result[0]
-        assert "symbol" in result.result[0]
         assert result.result[0]["id"] == "ENSG00000141510"
         assert result.result[0]["symbol"] == "TP53"
-        mock_client_instance.execute_async.assert_awaited_once()
+        mock_session.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_execute_query_with_array_jq_filter(self, sample_query_string):
@@ -150,69 +176,70 @@ class TestJQFiltering:
                 {"id": "ENSG00000012048", "approvedSymbol": "BRCA1"},
             ],
         }
+        mock_session = _make_mock_session(return_value=mock_response)
 
-        mock_client_instance = AsyncMock()
-        mock_client_instance.execute_async = AsyncMock(return_value=mock_response)
+        with patch(
+            "open_targets_platform_mcp.client.graphql._get_global_graphql_session",
+            return_value=mock_session,
+        ):
+            result = await execute_graphql_query(sample_query_string, jq_filter=".targets[] | .approvedSymbol")
 
-        with patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"):
-            with patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance):
-                result = await execute_graphql_query(sample_query_string, jq_filter=".targets[] | .approvedSymbol")
-
-        # Multiple results should be in result list
         assert result.status == QueryResultStatus.SUCCESS
         assert isinstance(result.result, list)
         assert result.result == ["TP53", "BRCA1"]
-        mock_client_instance.execute_async.assert_awaited_once()
+        mock_session.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_execute_query_jq_filter_error_handling(self, sample_query_string):
         """Test that jq filter runtime errors are handled gracefully."""
         mock_response = {"target": {"id": "ENSG00000141510"}}
+        mock_session = _make_mock_session(return_value=mock_response)
 
-        mock_client_instance = AsyncMock()
-        mock_client_instance.execute_async = AsyncMock(return_value=mock_response)
+        with (
+            patch(
+                "open_targets_platform_mcp.client.graphql._get_global_graphql_session",
+                return_value=mock_session,
+            ),
+            patch("open_targets_platform_mcp.client.graphql.jq.compile") as mock_jq_compile,
+        ):
+            mock_compiled_filter = Mock()
+            mock_compiled_filter.input_value.return_value.all.side_effect = Exception("jq execution error")
+            mock_jq_compile.return_value = mock_compiled_filter
 
-        # Mock jq filter to raise an error during execution (not compilation)
-        with patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"):
-            with patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance):
-                with patch("open_targets_platform_mcp.client.graphql.jq.compile") as mock_jq_compile:
-                    # Create a mock compiled filter that raises an error when used
-                    mock_compiled_filter = AsyncMock()
-                    mock_compiled_filter.input_value.return_value.all.side_effect = Exception("jq execution error")
-                    mock_jq_compile.return_value = mock_compiled_filter
+            result = await execute_graphql_query(sample_query_string, jq_filter=".invalid_filter")
 
-                    result = await execute_graphql_query(sample_query_string, jq_filter=".invalid_filter")
-
-        # Should return warning with original data
         assert result.status == QueryResultStatus.WARNING
         assert result.result == mock_response
         assert "jq filter failed" in str(result.message)
-        assert "// empty" in str(result.message)  # Should suggest null handling
-        mock_client_instance.execute_async.assert_awaited_once()
+        assert "// empty" in str(result.message)
+        mock_session.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_execute_query_jq_compilation_error(self, sample_query_string):
-        """Test that jq compilation errors bubble up."""
+        """Test that jq compilation errors return structured errors."""
         # Mock jq.compile to raise an error during compilation
         with patch("open_targets_platform_mcp.client.graphql.jq.compile") as mock_jq:
             mock_jq.side_effect = Exception("jq compilation error")
 
-            with pytest.raises(Exception, match="jq compilation error"):
-                await execute_graphql_query(sample_query_string, jq_filter=".invalid_filter")
+            result = await execute_graphql_query(sample_query_string, jq_filter=".invalid_filter")
+
+        assert result.status == QueryResultStatus.ERROR
+        assert "jq compilation error" in str(result.message)
 
     @pytest.mark.asyncio
     async def test_execute_query_no_jq_filter(self, sample_query_string, sample_graphql_response):
         """Test query execution without jq filter returns full response."""
-        mock_client_instance = AsyncMock()
-        mock_client_instance.execute_async = AsyncMock(return_value=sample_graphql_response)
+        mock_session = _make_mock_session(return_value=sample_graphql_response)
 
-        with patch("open_targets_platform_mcp.client.graphql.gql", return_value="parsed_query"):
-            with patch("open_targets_platform_mcp.client.graphql.Client", return_value=mock_client_instance):
-                result = await execute_graphql_query(sample_query_string)
+        with patch(
+            "open_targets_platform_mcp.client.graphql._get_global_graphql_session",
+            return_value=mock_session,
+        ):
+            result = await execute_graphql_query(sample_query_string)
 
         assert result.status == QueryResultStatus.SUCCESS
         assert result.result == sample_graphql_response
-        mock_client_instance.execute_async.assert_awaited_once()
+        mock_session.execute.assert_awaited_once()
 
 
 # ============================================================================
@@ -284,9 +311,7 @@ class TestGraphQLIntegration:
 
     @pytest.mark.asyncio
     async def test_real_invalid_query(self):
-        """Test that invalid query raises exception."""
-        from gql.transport.exceptions import TransportQueryError
-
+        """Test that invalid query returns error result."""
         invalid_query = """
         query {
             nonexistentField {
@@ -295,8 +320,8 @@ class TestGraphQLIntegration:
         }
         """
 
-        with pytest.raises(TransportQueryError):
-            await execute_graphql_query(invalid_query)
+        result = await execute_graphql_query(invalid_query)
+        assert result.status == QueryResultStatus.ERROR
 
 
 # ============================================================================

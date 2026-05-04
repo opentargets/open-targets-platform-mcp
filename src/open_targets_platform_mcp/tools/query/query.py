@@ -4,7 +4,7 @@ from typing import Annotated, Any
 
 from pydantic import Field
 
-from open_targets_platform_mcp.client import execute_graphql_query
+from open_targets_platform_mcp.client.graphql import execute_graphql_query
 from open_targets_platform_mcp.model.result import QueryResult
 
 
@@ -13,11 +13,7 @@ async def _query_impl(
     variables: dict[str, Any] | None = None,
     jq_filter: str | None = None,
 ) -> QueryResult:
-    return await execute_graphql_query(
-        query_string,
-        variables,
-        jq_filter=jq_filter,
-    )
+    return await execute_graphql_query(query_string, variables, jq_filter=jq_filter)
 
 
 async def query_with_jq(
