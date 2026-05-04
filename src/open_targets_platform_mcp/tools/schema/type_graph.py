@@ -25,16 +25,15 @@ async def get_type_dependencies(
     type_names: Annotated[
         list[str],
         Field(
-            description="List of GraphQL type names to explore (e.g., ['Target', 'Disease', 'Drug'])",
+            description="List of GraphQL type names to start exploration from.",
+            examples=[["Target", "Drug"]],
         ),
     ],
-) -> dict[str, str]:
-    """Get SDL subsets for the given GraphQL type names, split into
-    type-specific and shared dependencies.
-
-    The model-facing description lives in `type_graph_description.txt` and is
-    passed explicitly to `mcp.tool(...)` in `create_server.py`.
-    """
+) -> Annotated[
+    dict[str, str],
+    "Dictionary with one key per input type: SDL for types ONLY reachable from that type and 'shared' key: "
+    "SDL for types reachable from multiple input types.",
+]:
     graph = await type_graph_cache.get()
     available_types = sorted(graph.types.keys())
 
