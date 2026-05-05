@@ -11,7 +11,6 @@ from open_targets_platform_mcp.model.query_result import (
     BatchQueryResult,
     BatchQueryResultItem,
     BatchQueryStatusCounts,
-    QueryResult,
     QueryResultStatus,
 )
 
@@ -25,21 +24,12 @@ async def _handle_single_query(
     semaphore: asyncio.Semaphore,
 ) -> BatchQueryResultItem:
     async with semaphore:
-        result: QueryResult | None = None
-        key: str | None = None
-        if key_field not in variables:
-            key = None
-            result = QueryResult.create_error(
-                f"Key field '{key_field}' not found in variables at index {index}",
-                variables=variables,
-            )
-        else:
-            key = str(variables[key_field])
-            result = await execute_graphql_query(query_string, variables, jq_filter=jq_filter)
-            if result.status in (QueryResultStatus.ERROR, QueryResultStatus.WARNING):
-                result = result.model_copy(update={"variables": variables})
+        query_id = str(variables[key_field])
+        result = await execute_graphql_query(query_string, variables, jq_filter=jq_filter)
+        if result.status in (QueryResultStatus.ERROR, QueryResultStatus.WARNING):
+            result = result.model_copy(update={"variables": variables})
 
-        return BatchQueryResultItem(index=index, id=key, result=result)
+        return BatchQueryResultItem(index=index, id=query_id, result=result)
 
 
 async def _batch_query_impl(
