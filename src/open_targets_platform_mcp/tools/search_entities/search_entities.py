@@ -27,6 +27,7 @@ async def search_entities(
         list[str],
         Field(
             description="List of search queries.",
+            min_length=1,
             examples=[["BRCA1", "aspirin"]],
         ),
     ],

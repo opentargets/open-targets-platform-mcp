@@ -3,6 +3,8 @@
 import asyncio
 from typing import Annotated, Any
 
+from fastmcp.exceptions import ToolError
+
 from open_targets_platform_mcp.client.graphql import execute_graphql_query
 from open_targets_platform_mcp.model.query_result import (
     BatchQueryResult,
@@ -72,7 +74,7 @@ async def batch_query_with_jq(
         "The GraphQL query string to execute for all variable sets.",
     ],
     variables_list: Annotated[
-        list[dict[Any, Any]],
+        list[dict[str, Any]],
         "List of variable dictionaries, one per query execution.",
     ],
     key_field: Annotated[
@@ -87,7 +89,11 @@ async def batch_query_with_jq(
     BatchQueryResult,
     "Results keyed by the specified field value, with execution summary.",
 ]:
-    """Batch query with jq support - signature includes jq_filter."""
+    for idx, variables in enumerate(variables_list):
+        if key_field not in variables:
+            msg = f"Key field '{key_field}' not found in variables at index {idx}: {variables}"
+            raise ToolError(msg)
+
     return await _batch_query_impl(query_string, variables_list, key_field, jq_filter)
 
 

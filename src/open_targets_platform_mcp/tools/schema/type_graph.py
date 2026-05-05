@@ -26,6 +26,7 @@ async def get_type_dependencies(
         list[str],
         Field(
             description="List of GraphQL type names to start exploration from.",
+            min_length=1,
             examples=[["Target", "Drug"]],
         ),
     ],

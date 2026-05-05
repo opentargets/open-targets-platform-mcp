@@ -15,6 +15,7 @@ async def get_open_targets_graphql_schema(
         Field(
             description="List of category names to filter the schema. "
             "Returns only types relevant to the specified categories.",
+            min_length=1,
             examples=[["drug-mechanisms"], ["target-safety", "drug-safety"]],
         ),
     ],
