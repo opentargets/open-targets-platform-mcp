@@ -48,7 +48,7 @@ async def get_open_targets_graphql_schema(
     # Append common mistakes guide
     common_mistakes_guide = (
         resources.files("open_targets_platform_mcp.tools.schema")
-        .joinpath("common_mistakes_guide.txt")
+        .joinpath("common_mistakes_guide.md")
         .read_text(encoding="utf-8")
     )
     return sdl + "\n" + common_mistakes_guide
