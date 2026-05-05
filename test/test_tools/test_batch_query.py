@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, call, patch
 
 import pytest
 
+from open_targets_platform_mcp.client import graphql as graphql_module
 from open_targets_platform_mcp.model.query_result import BatchQueryResult, QueryResult, QueryResultStatus
 from open_targets_platform_mcp.tools.batch_query.batch_query import _batch_query_impl
 
@@ -57,12 +58,12 @@ class TestBatchQueryOpenTargetsGraphQL:
 
     @pytest.mark.asyncio
     async def test_batch_query_empty_variables_list(self, batch_query_string):
-        """Test that empty variables_list returns error."""
+        """Test that empty variables_list returns an empty BatchQueryResult."""
         result = await batch_query_fn(query_string=batch_query_string, variables_list=[], key_field="ensemblId")
 
-        assert isinstance(result, QueryResult)
-        assert result.status == QueryResultStatus.ERROR
-        assert "cannot be empty" in str(result.message)
+        assert isinstance(result, BatchQueryResult)
+        assert result.results == []
+        assert result.status_counts.total == 0
 
     @pytest.mark.asyncio
     async def test_batch_query_missing_key_field(self, batch_query_string):
@@ -154,12 +155,12 @@ class TestBatchQueryOpenTargetsGraphQL:
             )
 
         assert isinstance(result, BatchQueryResult)
-        result_dict = {r.key: r for r in result.results}
+        result_dict = {r.id: r for r in result.results}
 
         # Correct data for first entry
         tp53 = result_dict["ENSG00000141510"]
         assert tp53.result.status == QueryResultStatus.SUCCESS
-        assert tp53.result.result["target"]["approvedSymbol"] == "TP53"
+        assert tp53.result.data["target"]["approvedSymbol"] == "TP53"
 
         # Error mapped to middle entry, not bleed into neighbours
         brca1 = result_dict["ENSG00000012048"]
@@ -169,10 +170,10 @@ class TestBatchQueryOpenTargetsGraphQL:
         # Correct data for last entry despite middle failure
         brca2 = result_dict["ENSG00000139618"]
         assert brca2.result.status == QueryResultStatus.SUCCESS
-        assert brca2.result.result["target"]["approvedSymbol"] == "BRCA2"
+        assert brca2.result.data["target"]["approvedSymbol"] == "BRCA2"
 
         # Order in result list matches original input order
-        assert [r.key for r in result.results] == [
+        assert [r.id for r in result.results] == [
             "ENSG00000141510",
             "ENSG00000012048",
             "ENSG00000139618",

@@ -51,7 +51,7 @@ class TestExecuteGraphQLQuery:
 
         assert result.status == QueryResultStatus.SUCCESS
         assert result.data == sample_graphql_response
-        mock_client_instance.execute_async.assert_awaited_once()
+        mock_session.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_execute_query_with_variables(
@@ -140,7 +140,7 @@ class TestJQFiltering:
         assert result.status == QueryResultStatus.SUCCESS
         assert isinstance(result.data, list)
         assert result.data == ["ENSG00000141510"]
-        mock_client_instance.execute_async.assert_awaited_once()
+        mock_session.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_execute_query_with_complex_jq_filter(self, sample_query_string):
@@ -167,7 +167,7 @@ class TestJQFiltering:
         assert "symbol" in result.data[0]
         assert result.data[0]["id"] == "ENSG00000141510"
         assert result.data[0]["symbol"] == "TP53"
-        mock_client_instance.execute_async.assert_awaited_once()
+        mock_session.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_execute_query_with_array_jq_filter(self, sample_query_string):
@@ -189,7 +189,7 @@ class TestJQFiltering:
         assert result.status == QueryResultStatus.SUCCESS
         assert isinstance(result.data, list)
         assert result.data == ["TP53", "BRCA1"]
-        mock_client_instance.execute_async.assert_awaited_once()
+        mock_session.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_execute_query_jq_filter_error_handling(self, sample_query_string):
@@ -241,7 +241,7 @@ class TestJQFiltering:
 
         assert result.status == QueryResultStatus.SUCCESS
         assert result.data == sample_graphql_response
-        mock_client_instance.execute_async.assert_awaited_once()
+        mock_session.execute.assert_awaited_once()
 
 
 # ============================================================================
