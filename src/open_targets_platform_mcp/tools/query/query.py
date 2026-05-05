@@ -3,8 +3,8 @@
 from typing import Annotated, Any
 
 from open_targets_platform_mcp.client import execute_graphql_query
+from open_targets_platform_mcp.helper import clone_function_with_removed_parameter
 from open_targets_platform_mcp.model.query_result import QueryResult
-from open_targets_platform_mcp.tools.helper import clone_function_with_removed_parameter
 
 
 async def _query_impl(

@@ -12,6 +12,7 @@ from mcp.types import Icon
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
 
+from open_targets_platform_mcp.helper import build_description
 from open_targets_platform_mcp.settings import settings
 from open_targets_platform_mcp.tools import (
     batch_query_with_jq,
@@ -22,7 +23,6 @@ from open_targets_platform_mcp.tools import (
     query_without_jq,
     search_entities,
 )
-from open_targets_platform_mcp.tools.helper import build_description
 from open_targets_platform_mcp.tools.schema.schema import build_schema_docstring
 
 

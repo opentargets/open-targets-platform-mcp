@@ -95,6 +95,7 @@ def build_description(func: Callable[..., Any], main_text: str | None) -> str:
     sig = inspect.signature(func)
     hints = get_type_hints(func, include_extras=True)
 
+    main_text = main_text or sig.__doc__
     lines = [main_text.strip()] if main_text else []
     lines.append("")
 

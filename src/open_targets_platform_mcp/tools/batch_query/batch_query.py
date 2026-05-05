@@ -6,6 +6,7 @@ from typing import Annotated, Any
 from fastmcp.exceptions import ToolError
 
 from open_targets_platform_mcp.client.graphql import execute_graphql_query
+from open_targets_platform_mcp.helper import clone_function_with_removed_parameter
 from open_targets_platform_mcp.model.query_result import (
     BatchQueryResult,
     BatchQueryResultItem,
@@ -13,7 +14,6 @@ from open_targets_platform_mcp.model.query_result import (
     QueryResult,
     QueryResultStatus,
 )
-from open_targets_platform_mcp.tools.helper import clone_function_with_removed_parameter
 
 
 async def _handle_single_query(
