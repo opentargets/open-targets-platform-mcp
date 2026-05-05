@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, call, patch
 import pytest
 
 from open_targets_platform_mcp.client import graphql as graphql_module
-from open_targets_platform_mcp.model.result import BatchQueryResult, QueryResult, QueryResultStatus
+from open_targets_platform_mcp.model.query_result import BatchQueryResult, QueryResult, QueryResultStatus
 from open_targets_platform_mcp.tools.batch_query.batch_query import _batch_query_impl
 
 # Use the internal implementation function directly for testing
@@ -45,12 +45,12 @@ class TestBatchQueryOpenTargetsGraphQL:
             )
 
         assert isinstance(result, BatchQueryResult)
-        assert result.summary.total == 3
-        assert result.summary.successful == 3
-        assert result.summary.failed == 0
+        assert result.status_counts.total == 3
+        assert result.status_counts.successful == 3
+        assert result.status_counts.failed == 0
 
         # Check that results are in the list with correct keys
-        result_dict = {r.key: r for r in result.results if r.key is not None}
+        result_dict = {r.id: r for r in result.results if r.id is not None}
         assert "ENSG00000141510" in result_dict
         assert "ENSG00000012048" in result_dict
         assert "ENSG00000139618" in result_dict
@@ -58,12 +58,12 @@ class TestBatchQueryOpenTargetsGraphQL:
 
     @pytest.mark.asyncio
     async def test_batch_query_empty_variables_list(self, batch_query_string):
-        """Test that empty variables_list returns error."""
+        """Test that empty variables_list returns an empty BatchQueryResult."""
         result = await batch_query_fn(query_string=batch_query_string, variables_list=[], key_field="ensemblId")
 
-        assert isinstance(result, QueryResult)
-        assert result.status == QueryResultStatus.ERROR
-        assert "cannot be empty" in str(result.message)
+        assert isinstance(result, BatchQueryResult)
+        assert result.results == []
+        assert result.status_counts.total == 0
 
     @pytest.mark.asyncio
     async def test_batch_query_missing_key_field(self, batch_query_string):
@@ -90,13 +90,13 @@ class TestBatchQueryOpenTargetsGraphQL:
             )
 
         assert isinstance(result, BatchQueryResult)
-        assert result.summary.total == 3
-        assert result.summary.successful == 2
-        assert result.summary.failed == 1
+        assert result.status_counts.total == 3
+        assert result.status_counts.successful == 2
+        assert result.status_counts.failed == 1
 
         # Check that missing key_field entry exists and has error
         error_result = result.results[1]  # Index 1 is the one with missing key
-        assert error_result.key is None
+        assert error_result.id is None
         assert error_result.result.status == QueryResultStatus.ERROR
         assert "not found" in str(error_result.result.message)
         assert mock_execute.call_count == 2
@@ -121,12 +121,12 @@ class TestBatchQueryOpenTargetsGraphQL:
             )
 
         assert isinstance(result, BatchQueryResult)
-        assert result.summary.total == 3
-        assert result.summary.successful == 2
-        assert result.summary.failed == 1
+        assert result.status_counts.total == 3
+        assert result.status_counts.successful == 2
+        assert result.status_counts.failed == 1
 
         # Check the failed query result
-        result_dict = {r.key: r for r in result.results if r.key is not None}
+        result_dict = {r.id: r for r in result.results if r.id is not None}
         assert result_dict["ENSG00000012048"].result.status == QueryResultStatus.ERROR
 
     @pytest.mark.asyncio
@@ -155,12 +155,12 @@ class TestBatchQueryOpenTargetsGraphQL:
             )
 
         assert isinstance(result, BatchQueryResult)
-        result_dict = {r.key: r for r in result.results}
+        result_dict = {r.id: r for r in result.results}
 
         # Correct data for first entry
         tp53 = result_dict["ENSG00000141510"]
         assert tp53.result.status == QueryResultStatus.SUCCESS
-        assert tp53.result.result["target"]["approvedSymbol"] == "TP53"
+        assert tp53.result.data["target"]["approvedSymbol"] == "TP53"
 
         # Error mapped to middle entry, not bleed into neighbours
         brca1 = result_dict["ENSG00000012048"]
@@ -170,10 +170,10 @@ class TestBatchQueryOpenTargetsGraphQL:
         # Correct data for last entry despite middle failure
         brca2 = result_dict["ENSG00000139618"]
         assert brca2.result.status == QueryResultStatus.SUCCESS
-        assert brca2.result.result["target"]["approvedSymbol"] == "BRCA2"
+        assert brca2.result.data["target"]["approvedSymbol"] == "BRCA2"
 
         # Order in result list matches original input order
-        assert [r.key for r in result.results] == [
+        assert [r.id for r in result.results] == [
             "ENSG00000141510",
             "ENSG00000012048",
             "ENSG00000139618",
@@ -209,7 +209,7 @@ class TestBatchQueryOpenTargetsGraphQL:
         assert mock_execute.call_count == 3
 
         assert isinstance(result, BatchQueryResult)
-        assert result.summary.successful == 3
+        assert result.status_counts.successful == 3
 
     @pytest.mark.asyncio
     async def test_batch_query_without_jq_filter(self, batch_query_string, batch_variables_with_key):
@@ -237,7 +237,7 @@ class TestBatchQueryOpenTargetsGraphQL:
         assert mock_execute.call_count == 3
 
         assert isinstance(result, BatchQueryResult)
-        assert result.summary.successful == 3
+        assert result.status_counts.successful == 3
 
     @pytest.mark.asyncio
     async def test_batch_query_exception_handling(self, batch_query_string, batch_variables_with_key):
@@ -259,12 +259,12 @@ class TestBatchQueryOpenTargetsGraphQL:
             )
 
         assert isinstance(result, BatchQueryResult)
-        assert result.summary.total == 3
-        assert result.summary.successful == 2
-        assert result.summary.failed == 1
+        assert result.status_counts.total == 3
+        assert result.status_counts.successful == 2
+        assert result.status_counts.failed == 1
 
         # Check the error result
-        result_dict = {r.key: r for r in result.results if r.key is not None}
+        result_dict = {r.id: r for r in result.results if r.id is not None}
         failed_result = result_dict["ENSG00000012048"]
         assert failed_result.result.status == QueryResultStatus.ERROR
         assert "Network error" in str(failed_result.result.message)
@@ -333,13 +333,13 @@ class TestBatchQueryOpenTargetsGraphQL:
         # Check top-level structure
         assert isinstance(result, BatchQueryResult)
         assert isinstance(result.results, list)
-        assert isinstance(result.summary, type(result.summary))
+        assert isinstance(result.status_counts, type(result.status_counts))
 
         # Check summary structure
-        assert hasattr(result.summary, "total")
-        assert hasattr(result.summary, "successful")
-        assert hasattr(result.summary, "failed")
-        assert hasattr(result.summary, "warning")
+        assert hasattr(result.status_counts, "total")
+        assert hasattr(result.status_counts, "successful")
+        assert hasattr(result.status_counts, "failed")
+        assert hasattr(result.status_counts, "warning")
 
     @pytest.mark.asyncio
     async def test_batch_query_jq_filter_warning(self, batch_query_string, batch_variables_with_key):
@@ -361,10 +361,10 @@ class TestBatchQueryOpenTargetsGraphQL:
             )
 
         # The warning should still be in the result
-        result_dict = {r.key: r for r in result.results if r.key is not None}
+        result_dict = {r.id: r for r in result.results if r.id is not None}
         assert result_dict["ENSG00000141510"].result.status == QueryResultStatus.WARNING
-        assert result.summary.warning == 1  # Counted as warning
-        assert result.summary.successful == 0
+        assert result.status_counts.warning == 1  # Counted as warning
+        assert result.status_counts.successful == 0
 
 
 # ============================================================================
@@ -396,5 +396,53 @@ class TestBatchQueryIntegration:
         result = await batch_query_fn(query_string=query, variables_list=variables_list, key_field="ensemblId")
 
         assert isinstance(result, BatchQueryResult)
-        assert result.summary.total == 2
-        assert len(result.results) == 2
+        assert result.status_counts.total == 2
+        assert result.status_counts.successful == 2
+        assert result.status_counts.failed == 0
+
+        # Verify actual data
+        result_dict = {r.id: r for r in result.results if r.id is not None}
+        assert result_dict["ENSG00000141510"].result.data["target"]["approvedSymbol"] == "TP53"
+        assert result_dict["ENSG00000012048"].result.data["target"]["approvedSymbol"] == "BRCA1"
+
+    @pytest.mark.asyncio
+    async def test_real_batch_query_with_jq_filter(self):
+        """Test real batch query with jq filter (requires jq enabled)."""
+        from open_targets_platform_mcp.settings import settings
+
+        # Enable jq for this integration test
+        original_jq_enabled = settings.jq_enabled
+        settings.jq_enabled = True
+
+        try:
+            query = """
+            query GetTarget($ensemblId: String!) {
+                target(ensemblId: $ensemblId) {
+                    id
+                    approvedSymbol
+                }
+            }
+            """
+
+            variables_list = [
+                {"ensemblId": "ENSG00000141510"},
+                {"ensemblId": "ENSG00000012048"},
+            ]
+
+            result = await batch_query_fn(
+                query_string=query,
+                variables_list=variables_list,
+                key_field="ensemblId",
+                jq_filter=".target.approvedSymbol",
+            )
+
+            assert isinstance(result, BatchQueryResult)
+            result_dict = {r.id: r for r in result.results if r.id is not None}
+            # jq filter returns a list (even for single results)
+            assert isinstance(result_dict["ENSG00000141510"].result.data, list)
+            assert result_dict["ENSG00000141510"].result.data == ["TP53"]
+            assert isinstance(result_dict["ENSG00000012048"].result.data, list)
+            assert result_dict["ENSG00000012048"].result.data == ["BRCA1"]
+        finally:
+            # Restore original value
+            settings.jq_enabled = original_jq_enabled

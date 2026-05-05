@@ -25,32 +25,16 @@ async def get_type_dependencies(
     type_names: Annotated[
         list[str],
         Field(
-            description="List of GraphQL type names to explore (e.g., ['Target', 'Disease', 'Drug'])",
+            description="List of GraphQL type names to start exploration from.",
+            min_length=1,
+            examples=[["Target", "Drug"]],
         ),
     ],
-) -> dict[str, str]:
-    """Get schema subsets for types, separated by specific and shared deps.
-
-    Given a list of type names, returns SDL (Schema Definition Language)
-    organized into type-specific dependencies and shared dependencies.
-
-    Returns a dict with:
-        - One key per input type: SDL for types ONLY reachable from that type
-        - "shared" key: SDL for types reachable from multiple input types
-
-    Examples:
-        - get_type_dependencies(["Target"]) - All deps under "Target" key
-        - get_type_dependencies(["Target", "Drug"]) - Separated + shared
-
-    Args:
-        type_names: List of GraphQL type names to start exploration from
-
-    Returns:
-        dict with type-specific SDL and shared SDL
-
-    Raises:
-        ValueError: If any type_name is not found in the schema
-    """
+) -> Annotated[
+    dict[str, str],
+    "Dictionary with one key per input type: SDL for types ONLY reachable from that type and 'shared' key: "
+    "SDL for types reachable from multiple input types.",
+]:
     graph = await type_graph_cache.get()
     available_types = sorted(graph.types.keys())
 

@@ -1,0 +1,48 @@
+Execute GraphQL queries against the Open Targets Platform API.
+
+WORKFLOW - Follow these steps in order:
+
+Step 1: RESOLVE IDENTIFIERS
+    If user provides common names (gene symbols, disease names, drug names),
+    use `search_entity` tool FIRST to convert them to standardized IDs:
+
+    - Targets/Genes: "BRCA2" -> ENSEMBL ID "ENSG00000139618"
+    - Diseases: "breast cancer" -> EFO/MONDO ID "MONDO_0007254"
+    - Drugs: "aspirin" -> ChEMBL ID "CHEMBL1201583"
+    - Variants: Use "chr_pos_ref_alt" format or rsIDs
+
+    Example: search_entity(query_string="BRCA2", entity_names=["target"])
+
+Step 2: LEARN QUERY STRUCTURE
+    Call `get_open_targets_graphql_schema` with relevant categories to retrieve
+    the schema subset needed for your query. Select categories that cover the
+    data domains you need - BE INCLUSIVE (it's better to include extra categories
+    than to miss required types).
+
+    Example: For a query about drug mechanisms and safety:
+    get_open_targets_graphql_schema(categories=["drug-mechanisms", "drug-safety"])
+
+    Study the returned schema to understand available types, fields, and their
+    relationships, then construct a GraphQL query that fetches the information
+    the user needs.
+
+    FALLBACK: If you encounter errors or need detailed information about specific
+    types, use `get_type_dependencies` sparingly to explore type relationships.
+    This tool provides exhaustive type dependency information but should only be
+    used when category-based retrieval is insufficient.
+
+Step 3: CONSTRUCT AND EXECUTE QUERY
+    Build GraphQL query using:
+    - Standardized IDs from Step 1 (REQUIRED)
+    - Query structure from Step 2
+    - Follow the "COMMON MISTAKES TO AVOID" guidance in the schema output
+
+    Call this tool with query_string and optional variables.
+
+REQUIRED IDENTIFIER FORMATS:
+- Targets/Genes: ENSEMBL IDs (e.g., "ENSG00000139618")
+- Diseases: EFO IDs (e.g., "EFO_0000305") or MONDO IDs (e.g., "MONDO_0007254")
+- Drugs: ChEMBL IDs (e.g., "CHEMBL1201583")
+- Variants: "chr_pos_ref_alt" format (e.g., "19_44908822_C_T") or rsIDs (e.g., "rs7412")
+- Studies: Study IDs (e.g., "GCST90002357")
+- Credible Sets: Study Locus IDs (e.g., "7d68cc9c70351c9dbd2a2c0c145e555d")

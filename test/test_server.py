@@ -4,6 +4,7 @@ import pytest
 
 from open_targets_platform_mcp.create_server import create_server
 from open_targets_platform_mcp.server import mcp
+from open_targets_platform_mcp.tools.schema.schema import build_schema_docstring
 
 
 class TestCreateServer:
@@ -28,26 +29,48 @@ class TestCreateServer:
         assert result is not None
 
     @pytest.mark.asyncio
+    async def test_schema_tool_description_is_full_docstring(self):
+        """The registered get_open_targets_graphql_schema description must include
+        the full category list.
+
+        Regression: FastMCP parses Google-style docstrings and only keeps the
+        first text section, dropping the trailing "Available categories:" block.
+        Passing description= explicitly to mcp.tool(...) preserves it.
+        """
+        server = await create_server()
+        tool = await server.get_tool("get_open_targets_graphql_schema")
+
+        assert tool.description is not None
+        assert tool.description.rstrip().startswith(build_schema_docstring().rstrip())
+        assert "Available categories:" in tool.description
+        assert "drug-mechanisms" in tool.description
+        assert "genetic-associations" in tool.description
+
+    @pytest.mark.asyncio
     async def test_all_tools_have_readonly_hint(self):
         """Test that all registered tools have readOnlyHint set to True."""
         server = await create_server()
-        tools = await server.get_tools()
 
-        # Ensure at least one tool is registered
+        # FastMCP exposes either get_tools() returning a dict or list_tools()
+        # returning a list.
+        if hasattr(server, "get_tools"):
+            tools = list((await server.get_tools()).values())
+        else:
+            tools = await server.list_tools()
+
         assert len(tools) > 0, "No tools registered in the server"
 
-        # Check each tool has readOnlyHint=True
-        for tool_name, tool_obj in tools.items():
-            assert hasattr(tool_obj, "annotations"), f"Tool '{tool_name}' has no annotations attribute"
+        for tool_obj in tools:
+            assert hasattr(tool_obj, "annotations"), f"Tool '{tool_obj.name}' has no annotations attribute"
 
             annotations = tool_obj.annotations
             assert hasattr(
                 annotations,
                 "readOnlyHint",
-            ), f"Tool '{tool_name}' annotations have no readOnlyHint attribute"
+            ), f"Tool '{tool_obj.name}' annotations have no readOnlyHint attribute"
 
             assert annotations.readOnlyHint is True, (
-                f"Tool '{tool_name}' does not have readOnlyHint=True (got {annotations.readOnlyHint})"
+                f"Tool '{tool_obj.name}' does not have readOnlyHint=True (got {annotations.readOnlyHint})"
             )
 
 
