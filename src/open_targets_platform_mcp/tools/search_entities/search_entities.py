@@ -2,6 +2,7 @@
 
 from typing import Annotated
 
+from fastmcp.exceptions import ToolError
 from pydantic import Field
 
 from open_targets_platform_mcp.model.query_result import QueryResultStatus
@@ -41,15 +42,19 @@ async def search_entities(
         VARIABLE_FIELD,
     )
 
-    result = dict[str, list[SearchEntitiesFoundEntity]]()
-    for query_result in batch_query_result.results:
-        if query_result.id is None:
-            continue
-        query_string = query_result.id
-        entities = list[SearchEntitiesFoundEntity]()
-        if query_result.result.status == QueryResultStatus.SUCCESS and query_result.result.data is not None:
-            for hit in query_result.result.data.get("search", {}).get("hits", [])[:3]:
-                entities.append(SearchEntitiesFoundEntity(id=hit["id"], type=hit["entity"]))
-        result[query_string] = entities
+    try:
+        result = dict[str, list[SearchEntitiesFoundEntity]]()
+        for query_result in batch_query_result.results:
+            if query_result.id is None:
+                continue
+            query_string = query_result.id
+            entities = list[SearchEntitiesFoundEntity]()
+            if query_result.result.status == QueryResultStatus.SUCCESS and query_result.result.data is not None:
+                for hit in query_result.result.data.get("search", {}).get("hits", [])[:3]:
+                    entities.append(SearchEntitiesFoundEntity(id=hit["id"], type=hit["entity"]))
+            result[query_string] = entities
+    except Exception as e:
+        msg = f"Failed to process batch query results: {e}"
+        raise ToolError(msg) from e
 
     return result

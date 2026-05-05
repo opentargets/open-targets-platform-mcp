@@ -2,6 +2,7 @@
 
 from typing import Annotated
 
+from fastmcp.exceptions import ToolError
 from pydantic import Field
 
 from open_targets_platform_mcp.tools.schema.caches import schema_cache, type_graph_cache
@@ -42,7 +43,7 @@ async def get_type_dependencies(
     invalid_types = [t for t in type_names if t not in graph.types]
     if invalid_types:
         msg = _build_type_not_found_message(invalid_types[0], available_types)
-        raise ValueError(msg)
+        raise ToolError(msg)
 
     # Get reachable types for each input type
     reachable_by_type: dict[str, set[str]] = {}
