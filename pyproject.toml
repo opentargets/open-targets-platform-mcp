@@ -1,6 +1,6 @@
 [project]
 name = "open-targets-platform-mcp"
-version = "0.0.2"
+dynamic = ["version"]
 description = "Official implementation of Model Context Protocol for Open Targets Platform"
 authors = [
     { name = "Francesco Carli", email = "carli@ebi.ac.uk" },
@@ -25,14 +25,14 @@ classifiers = [
     "Typing :: Typed"
 ]
 dependencies = [
-    "fastmcp>=2.13.0.2",
-    "gql[aiohttp]>=4.0.0",
-    "pydantic>=2.12.4",
-    "jq>=1.10.0",
-    "typer>=0.20.0",
-    "pydantic-settings>=2.12.0",
-    "fastapi>=0.136.0",
-    "starlette>=0.50.0",
+    "fastmcp==2.13.3",
+    "gql[aiohttp]==4.0.0",
+    "pydantic==2.12.5",
+    "jq==1.10.0",
+    "typer==0.20.0",
+    "pydantic-settings==2.12.0",
+    "fastapi==0.136.0",
+    "starlette==0.50.0",
 ]
 
 [project.scripts]
@@ -52,8 +52,16 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "uv-dynamic-versioning"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+pattern = "^(?P<base>20[0-9]{2}\\.[0-9]{2}\\.[0-9]+)$"
+style = "pep440"
+vcs = "git"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/open_targets_platform_mcp"]
