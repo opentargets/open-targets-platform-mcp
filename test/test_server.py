@@ -50,7 +50,8 @@ class TestCreateServer:
     async def test_type_dependencies_tool_description_is_full(self):
         """The registered get_type_dependencies description must include the
         Examples block and the dict-shape explanation. Same docstring-parser
-        regression as above."""
+        regression as above.
+        """
         server = await create_server()
         tool = await server.get_tool("get_type_dependencies")
 

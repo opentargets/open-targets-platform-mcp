@@ -12,11 +12,7 @@ async def _query_impl(
     variables: dict[str, Any] | None = None,
     jq_filter: str | None = None,
 ) -> QueryResult:
-    return await execute_graphql_query(
-        query_string,
-        variables,
-        jq_filter=jq_filter,
-    )
+    return await execute_graphql_query(query_string, variables, jq_filter=jq_filter)
 
 
 async def query_with_jq(

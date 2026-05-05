@@ -12,6 +12,16 @@ from open_targets_platform_mcp.tools.query.query import _query_impl
 query_fn = _query_impl
 
 
+@pytest.fixture(autouse=True)
+def reset_graphql_session():
+    """Reset the global gql session between tests."""
+    graphql_module._runtime_state.client = None
+    graphql_module._runtime_state.session = None
+    yield
+    graphql_module._runtime_state.client = None
+    graphql_module._runtime_state.session = None
+
+
 class TestQueryOpenTargetsGraphQL:
     """Tests for query_open_targets_graphql function."""
 
