@@ -87,6 +87,10 @@ convention = "google"
 [tool.ruff.lint.per-file-ignores]
 "test/*" = ["S101", "D100", "D101", "D102", "D103", "D104", "SLF001"]
 
+[tool.pytest.ini_options]
+testpaths = ["test"]
+asyncio_mode = "auto"
+
 [tool.pyright]
 pythonVersion = "3.10"
 pythonPlatform = "All"

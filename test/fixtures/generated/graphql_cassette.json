@@ -1,0 +1,432 @@
+{
+  "_comment": "AUTO-GENERATED \u2014 DO NOT EDIT MANUALLY. Regenerate with: uv run python test/fixtures/generated/generate_fixtures.py",
+  "records": [
+    {
+      "request": {
+        "query": "{\n  meta {\n    name\n    apiVersion {\n      x\n      y\n      z\n    }\n    dataVersion {\n      year\n      month\n      iteration\n    }\n  }\n}",
+        "variables": null
+      },
+      "response": {
+        "meta": {
+          "name": "Open Targets GraphQL & REST API Beta",
+          "apiVersion": {
+            "x": "26",
+            "y": "03",
+            "z": "1"
+          },
+          "dataVersion": {
+            "year": "26",
+            "month": "03",
+            "iteration": null
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query TargetQuery($ensemblId: String!) {\n  target(ensemblId: $ensemblId) {\n    id\n    approvedSymbol\n    approvedName\n  }\n}",
+        "variables": {
+          "ensemblId": "ENSG00000139618"
+        }
+      },
+      "response": {
+        "target": {
+          "id": "ENSG00000139618",
+          "approvedSymbol": "BRCA2",
+          "approvedName": "BRCA2 DNA repair associated"
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query TargetQuery($ensemblId: String!) {\n  target(ensemblId: $ensemblId) {\n    id\n    approvedSymbol\n    approvedName\n  }\n}",
+        "variables": {
+          "ensemblId": "ENSG00000141510"
+        }
+      },
+      "response": {
+        "target": {
+          "id": "ENSG00000141510",
+          "approvedSymbol": "TP53",
+          "approvedName": "tumor protein p53"
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query TargetQuery($ensemblId: String!) {\n  target(ensemblId: $ensemblId) {\n    id\n    approvedSymbol\n    approvedName\n  }\n}",
+        "variables": {
+          "ensemblId": "ENSG_UNKNOWN_DOES_NOT_EXIST"
+        }
+      },
+      "response": {
+        "target": null
+      }
+    },
+    {
+      "request": {
+        "query": "query searchEntity($queryString: String!) {\n  search(queryString: $queryString) {\n    total\n    hits {\n      id\n      entity\n    }\n  }\n}",
+        "variables": {
+          "queryString": "BRCA1"
+        }
+      },
+      "response": {
+        "search": {
+          "total": 1552,
+          "hits": [
+            {
+              "id": "ENSG00000012048",
+              "entity": "target"
+            },
+            {
+              "id": "MONDO_0700268",
+              "entity": "disease"
+            },
+            {
+              "id": "MONDO_0013685",
+              "entity": "disease"
+            },
+            {
+              "id": "MONDO_0003582",
+              "entity": "disease"
+            },
+            {
+              "id": "Orphanet_145",
+              "entity": "disease"
+            },
+            {
+              "id": "gtex_tx_liver_enst00000357654",
+              "entity": "study"
+            },
+            {
+              "id": "MONDO_0011450",
+              "entity": "disease"
+            },
+            {
+              "id": "gtex_leafcutter_adipose_visceral_17_43104956_43106478_clu_39870_-",
+              "entity": "study"
+            },
+            {
+              "id": "fairfax_2014_microarray_monocyte_naive_ilmn_2311089",
+              "entity": "study"
+            },
+            {
+              "id": "fairfax_2014_microarray_monocyte_naive_ilmn_1738027",
+              "entity": "study"
+            },
+            {
+              "id": "fairfax_2014_microarray_monocyte_ifn24_ilmn_2311089",
+              "entity": "study"
+            },
+            {
+              "id": "EFO_0011021",
+              "entity": "disease"
+            },
+            {
+              "id": "fairfax_2014_microarray_monocyte_lps24_ilmn_1738027",
+              "entity": "study"
+            },
+            {
+              "id": "fairfax_2014_microarray_monocyte_lps24_ilmn_2311089",
+              "entity": "study"
+            },
+            {
+              "id": "hipsci_ge_ipsc_ensg00000012048",
+              "entity": "study"
+            },
+            {
+              "id": "cedar_microarray_transverse_colon_ilmn_2311089",
+              "entity": "study"
+            },
+            {
+              "id": "fairfax_2012_microarray_b-cell_cd19_ilmn_1738027",
+              "entity": "study"
+            },
+            {
+              "id": "cedar_microarray_neutrophil_cd15_ilmn_2311089",
+              "entity": "study"
+            },
+            {
+              "id": "cedar_microarray_neutrophil_cd15_ilmn_1738027",
+              "entity": "study"
+            },
+            {
+              "id": "fairfax_2014_microarray_monocyte_lps2_ilmn_2311089",
+              "entity": "study"
+            },
+            {
+              "id": "gilchrist_2021_microarray_nk-cell_naive_ilmn_2311089",
+              "entity": "study"
+            },
+            {
+              "id": "gilchrist_2021_microarray_nk-cell_naive_ilmn_1738027",
+              "entity": "study"
+            },
+            {
+              "id": "MONDO_0004992",
+              "entity": "disease"
+            },
+            {
+              "id": "ENSG00000267595",
+              "entity": "target"
+            },
+            {
+              "id": "OTAR_0000017",
+              "entity": "disease"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query searchEntity($queryString: String!) {\n  search(queryString: $queryString) {\n    total\n    hits {\n      id\n      entity\n    }\n  }\n}",
+        "variables": {
+          "queryString": "aspirin"
+        }
+      },
+      "response": {
+        "search": {
+          "total": 124,
+          "hits": [
+            {
+              "id": "CHEMBL25",
+              "entity": "drug"
+            },
+            {
+              "id": "HP_0012042",
+              "entity": "disease"
+            },
+            {
+              "id": "ENSG00000073756",
+              "entity": "target"
+            },
+            {
+              "id": "ENSG00000095303",
+              "entity": "target"
+            },
+            {
+              "id": "EFO_0005211",
+              "entity": "disease"
+            },
+            {
+              "id": "MONDO_0005178",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0002315",
+              "entity": "disease"
+            },
+            {
+              "id": "MP_0001914",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_1001375",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0003418",
+              "entity": "disease"
+            },
+            {
+              "id": "MONDO_0004247",
+              "entity": "disease"
+            },
+            {
+              "id": "MP_0001845",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0007013",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0012735",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0004607",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0001945",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0009846",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_1000985",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0003419",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0009454",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0003326",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0010072",
+              "entity": "disease"
+            },
+            {
+              "id": "Orphanet_733",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0005672",
+              "entity": "disease"
+            },
+            {
+              "id": "MONDO_0021108",
+              "entity": "disease"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query searchEntity($queryString: String!) {\n  search(queryString: $queryString) {\n    total\n    hits {\n      id\n      entity\n    }\n  }\n}",
+        "variables": {
+          "queryString": "ibuprofen"
+        }
+      },
+      "response": {
+        "search": {
+          "total": 85,
+          "hits": [
+            {
+              "id": "CHEMBL521",
+              "entity": "drug"
+            },
+            {
+              "id": "MONDO_0005178",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0002315",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0021158",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0003418",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0004616",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0000706",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0012532",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0004607",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0002609",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0001945",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0009846",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0003419",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0003326",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0010072",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0009582",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0001742",
+              "entity": "disease"
+            },
+            {
+              "id": "MONDO_0002258",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_0007214",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0002829",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_1000652",
+              "entity": "disease"
+            },
+            {
+              "id": "EFO_1001139",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0001643",
+              "entity": "disease"
+            },
+            {
+              "id": "HP_0100607",
+              "entity": "disease"
+            },
+            {
+              "id": "MONDO_0002815",
+              "entity": "disease"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "{\n  nonExistentField\n}",
+        "variables": null
+      },
+      "response": {
+        "_error": "{'message': \"Cannot query field 'nonExistentField' on type 'Query'. (line 2, column 3):\\n  nonExistentField\\n  ^\", 'locations': [{'line': 2, 'column': 3}]}"
+      }
+    },
+    {
+      "request": {
+        "query": "query TargetQuery($ensemblId: Int!) {\n  target(ensemblId: $ensemblId) {\n    id\n  }\n}",
+        "variables": {
+          "ensemblId": 12345
+        }
+      },
+      "response": {
+        "_error": "{'message': \"Variable '$ensemblId' of type 'Int!' used in position expecting type 'String!'. (line 1, column 19):\\nquery TargetQuery($ensemblId: Int!) {\\n                  ^\\n (line 2, column 21):\\n  target(ensemblId: $ensemblId) {\\n                    ^\", 'locations': [{'line': 1, 'column': 19}, {'line': 2, 'column': 21}]}"
+      }
+    }
+  ]
+}

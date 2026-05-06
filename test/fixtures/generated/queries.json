@@ -1,0 +1,52 @@
+{
+  "_comment": "AUTO-GENERATED source — edit this file to add/remove queries, then run: uv run python test/fixtures/generated/generate_fixtures.py",
+  "queries": [
+    {
+      "label": "meta",
+      "query": "query { meta { name apiVersion { x y z } dataVersion { year month iteration } } }",
+      "variables": null
+    },
+    {
+      "label": "target_brca2",
+      "query": "query TargetQuery($ensemblId: String!) { target(ensemblId: $ensemblId) { id approvedSymbol approvedName } }",
+      "variables": { "ensemblId": "ENSG00000139618" }
+    },
+    {
+      "label": "target_tp53",
+      "query": "query TargetQuery($ensemblId: String!) { target(ensemblId: $ensemblId) { id approvedSymbol approvedName } }",
+      "variables": { "ensemblId": "ENSG00000141510" }
+    },
+    {
+      "label": "target_unknown_id",
+      "query": "query TargetQuery($ensemblId: String!) { target(ensemblId: $ensemblId) { id approvedSymbol approvedName } }",
+      "variables": { "ensemblId": "ENSG_UNKNOWN_DOES_NOT_EXIST" }
+    },
+    {
+      "label": "search_brca1",
+      "query": "query searchEntity($queryString: String!) { search(queryString: $queryString) { total hits { id entity } } }",
+      "variables": { "queryString": "BRCA1" }
+    },
+    {
+      "label": "search_aspirin",
+      "query": "query searchEntity($queryString: String!) { search(queryString: $queryString) { total hits { id entity } } }",
+      "variables": { "queryString": "aspirin" }
+    },
+    {
+      "label": "search_ibuprofen",
+      "query": "query searchEntity($queryString: String!) { search(queryString: $queryString) { total hits { id entity } } }",
+      "variables": { "queryString": "ibuprofen" }
+    },
+    {
+      "label": "invalid_unknown_field",
+      "query": "query { nonExistentField }",
+      "variables": null,
+      "expect_error": true
+    },
+    {
+      "label": "invalid_wrong_variable_type",
+      "query": "query TargetQuery($ensemblId: Int!) { target(ensemblId: $ensemblId) { id } }",
+      "variables": { "ensemblId": 12345 },
+      "expect_error": true
+    }
+  ]
+}
