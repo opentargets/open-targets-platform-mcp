@@ -6,13 +6,13 @@ from importlib import metadata, resources
 from typing import Any
 
 from fastmcp import FastMCP
-from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
 from fastmcp.server.middleware.timing import DetailedTimingMiddleware
 from mcp.types import Icon
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
 
 from open_targets_platform_mcp.helper import build_description
+from open_targets_platform_mcp.middleware.handshake_exempt_rate_limiting import HandshakeExemptRateLimitingMiddleware
 from open_targets_platform_mcp.settings import settings
 from open_targets_platform_mcp.tools import (
     batch_query_with_jq,
@@ -57,7 +57,7 @@ async def create_server() -> FastMCP:
 
     if settings.rate_limiting_enabled:
         mcp.add_middleware(
-            RateLimitingMiddleware(
+            HandshakeExemptRateLimitingMiddleware(
                 settings.rate_limiting_max_requests_per_second,
                 settings.rate_limiting_burst_capacity,
             ),
