@@ -6,6 +6,7 @@ from gql.client import AsyncClientSession
 from gql.transport.aiohttp import AIOHTTPTransport
 from graphql import GraphQLSchema
 
+from open_targets_platform_mcp import __dist_name__, __version__
 from open_targets_platform_mcp.model.exception import JqCompilationError
 from open_targets_platform_mcp.model.query_result import QueryResult
 from open_targets_platform_mcp.settings import settings
@@ -20,10 +21,14 @@ _runtime_state: _RuntimeState = _RuntimeState()
 
 
 def _create_graphql_client(*, fetch_schema_from_transport: bool = False) -> Client:
+    user_agent = f"{__dist_name__}/{__version__}"
+    if settings.http_base_url:
+        user_agent += f" ({settings.http_base_url})"
     transport = AIOHTTPTransport(
         url=str(settings.api_endpoint),
         headers={
             "Content-Type": "application/json",
+            "User-Agent": user_agent,
         },
         timeout=settings.api_call_timeout,
     )
