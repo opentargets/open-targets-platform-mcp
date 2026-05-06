@@ -31,6 +31,8 @@ jobs:
           echo "GOOGLE_IMAGE_NAME=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_REGISTRY_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/${{ env.REPO_SHORT_NAME }}" >> $GITHUB_ENV
     
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - id: auth-google-registry
         name: Authenticate to Google Cloud for Artifact Registry
