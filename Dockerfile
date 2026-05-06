@@ -19,6 +19,9 @@ COPY . .
 # Install dependencies and package using uv
 RUN uv sync --frozen --no-dev
 
+# Remove .git to keep final image small (no longer needed after versioning)
+RUN rm -rf /app/.git
+
 # Runtime stage
 FROM python:3.12-slim
 
