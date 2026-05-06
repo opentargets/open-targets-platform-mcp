@@ -35,6 +35,10 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - run: |
+          git tag
+          git describe --tags --always
+
       - id: auth-google-registry
         name: Authenticate to Google Cloud for Artifact Registry
         uses: google-github-actions/auth@v3

@@ -11,6 +11,7 @@ from mcp.types import Icon
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
 
+from open_targets_platform_mcp import __version__
 from open_targets_platform_mcp.helper import build_description
 from open_targets_platform_mcp.middleware.handshake_exempt_rate_limiting import HandshakeExemptRateLimitingMiddleware
 from open_targets_platform_mcp.settings import settings
@@ -39,6 +40,7 @@ async def create_server() -> FastMCP:
 
     mcp = FastMCP(
         name=settings.server_name,
+        version=__version__,
         icons=[Icon(src=data_uri, mimeType="image/png")],
         mask_error_details=True,
     )

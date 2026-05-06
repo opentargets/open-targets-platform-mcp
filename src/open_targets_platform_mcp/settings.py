@@ -3,6 +3,7 @@ from typing import Any, Literal
 from pydantic import HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from open_targets_platform_mcp import __version__
 from open_targets_platform_mcp.types import TransportType
 
 
@@ -17,7 +18,7 @@ class Settings(BaseSettings):
 
     api_endpoint: HttpUrl = HttpUrl("https://api.platform.opentargets.org/api/v4/graphql")
     api_call_timeout: int = 30
-    server_name: str = "Model Context Protocol server for Open Targets Platform"
+    server_name: str = f"Model Context Protocol server for Open Targets Platform version {__version__}"
     transport: TransportType = TransportType.HTTP
     http_host: str = "localhost"
     http_port: int = 8000
