@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     transport: TransportType = TransportType.HTTP
     http_host: str = "localhost"
     http_port: int = 8000
+    http_base_url: HttpUrl | None = None
     stateless_http: bool = True
     rate_limiting_enabled: bool = False
     rate_limiting_max_requests_per_second: float = 3
