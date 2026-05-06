@@ -31,6 +31,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
 
       - id: auth-google-registry
         name: Authenticate to Google Cloud for Artifact Registry

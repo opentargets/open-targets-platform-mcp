@@ -66,7 +66,7 @@ packages = ["src/open_targets_platform_mcp"]
 
 [tool.uv-dynamic-versioning]
 fallback-version = "0.0.0"
-pattern = "^(?P<base>20[0-9]{2}\\.[0-9]{2}\\.[0-9]+)$"
+pattern = "^(?P<base>20[0-9]{2}\\.[0-9]{1,2}\\.[0-9]+)$"
 style = "pep440"
 vcs = "git"
 
