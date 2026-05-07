@@ -1,7 +1,7 @@
 import functools
 import inspect
 from collections.abc import Callable
-from typing import Annotated, Any, cast, get_args, get_origin, get_type_hints
+from typing import Annotated, Any, Union, cast, get_args, get_origin, get_type_hints
 
 from pydantic.fields import FieldInfo
 
@@ -48,6 +48,13 @@ def _render_type(tp: Any) -> str:
 
 
 def _build_line(arg_name: str | None, ann: type) -> str:
+    # Unwrap Optional[Annotated[...]] — get_type_hints may return this form
+    # when a parameter has a None default and the annotation uses `X | None`.
+    if get_origin(ann) is Union:
+        inner = [a for a in get_args(ann) if a is not type(None)]
+        if len(inner) == 1 and get_origin(inner[0]) is Annotated:
+            ann = inner[0]
+
     if get_origin(ann) is not Annotated:
         msg = "Must be Annotated[..., Field(...)]"
         raise TypeError(msg)
