@@ -238,7 +238,23 @@ For detailed instructions on configuring the Open Targets Platform MCP server wi
 
 ## Testing
 
-> **Note**: The test suite is currently AI-generated and will be reviewed and refined in the near future.
+The test suite is built around two guiding principles:
+
+**1. Test at the highest meaningful level.**
+Tests exercise the server through the [fastmcp](https://gofastmcp.com/) in-process client (`Client.call_tool()`), the same interface an LLM uses at runtime. This makes every test a near-system test: tool registration, argument validation, description generation, and response serialisation are all covered as a single end-to-end path, rather than testing internal functions in isolation.
+
+**2. Use GraphQL replay instead of live network calls.**
+Real API responses are recorded once into a cassette file (`test/fixtures/generated/graphql_cassette.json`) by running the generator script against the live API. During normal test runs the cassette is replayed deterministically, so tests are fast, reproducible, and do not depend on network availability. The cassette is regenerated intentionally when new queries are needed:
+
+```bash
+uv run python test/fixtures/generated/generate_fixtures.py
+```
+
+To run tests against the live API instead of the cassette:
+
+```bash
+uv run python -m pytest --live
+```
 
 ## Contributing
 
