@@ -164,3 +164,28 @@ class TestGetTypeDependencies:
                 "get_type_dependencies",
                 {"type_names": ["Target", "AbsolutelyFakeType"]},
             )
+
+
+# ---------------------------------------------------------------------------
+# categories.json integrity
+# ---------------------------------------------------------------------------
+
+
+class TestCategoriesIntegrity:
+    def test_all_category_types_exist_in_schema(self, graphql_schema, mock_schema_caches):
+        import json
+        from pathlib import Path
+
+        categories_path = (
+            Path(__file__).parent.parent / "src" / "open_targets_platform_mcp" / "assets" / "categories.json"
+        )
+        categories = json.loads(categories_path.read_text(encoding="utf-8"))
+        schema_type_map = graphql_schema.type_map
+
+        missing: list[str] = []
+        for category, data in categories.items():
+            for type_name in data["types"]:
+                if type_name not in schema_type_map:
+                    missing.append(f"{category}: {type_name}")
+
+        assert missing == [], "Types listed in categories.json are absent from the schema:\n" + "\n".join(missing)
