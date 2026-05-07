@@ -1,7 +1,7 @@
 from typing import Any, cast
 
 import jq
-from gql import Client, GraphQLRequest, gql
+from gql import Client, GraphQLRequest
 from gql.client import AsyncClientSession
 from gql.transport.aiohttp import AIOHTTPTransport
 from graphql import GraphQLSchema
@@ -84,9 +84,8 @@ async def execute_graphql_query(
     """Make a generic GraphQL API call and apply a jq filter to the result."""
     try:
         session = await _get_global_graphql_session()
-        query = gql(query_string)
+        request = GraphQLRequest(query_string, variable_values=variables)
         compiled_filter = _compile_jq_filter(jq_filter)
-        request = GraphQLRequest(query, variable_values=variables)
         result = await session.execute(request)
         result = _apply_optional_filter(result, compiled_filter, jq_filter)
     except Exception as exception:

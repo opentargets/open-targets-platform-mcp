@@ -73,7 +73,9 @@ async def batch_query_with_jq(
     ],
     jq_filter: Annotated[
         str | None,
-        "Optional jq filter applied identically and individually to all query results.",
+        "Optional jq filter applied identically and individually to all query results."
+        "Always use null coalescing (`//`) to handle null or missing values gracefully, "
+        'for example: `// empty`, `// []`, `// {}`, `// ""`, or any other sensible default.',
     ] = None,
 ) -> Annotated[
     BatchQueryResult,

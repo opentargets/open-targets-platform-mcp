@@ -1,301 +1,222 @@
-"""Pytest configuration and fixtures for otar_mcp tests."""
+"""Shared pytest fixtures and the cassette-based gql session mock."""
 
-from unittest.mock import MagicMock, Mock
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+from typing import Any
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from graphql import GraphQLSchema, build_schema
+from graphql import build_schema
 
-# ============================================================================
-# Test Markers Configuration
-# ============================================================================
-
-
-def pytest_configure(config):
-    """Register custom markers."""
-    config.addinivalue_line("markers", "integration: marks tests as integration tests (requires real API access)")
+# ---------------------------------------------------------------------------
+# --live flag
+# ---------------------------------------------------------------------------
 
 
-# ============================================================================
-# API Endpoint Fixtures
-# ============================================================================
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--live",
+        action="store_true",
+        default=False,
+        help="Run tests against the real GraphQL API instead of the cassette.",
+    )
 
 
-@pytest.fixture
-def mock_api_endpoint() -> str:
-    """Mock Open Targets Platform API endpoint for testing."""
-    return "https://api.platform.opentargets.org/api/v4/graphql"
+@pytest.fixture(scope="session")
+def live(request: pytest.FixtureRequest) -> bool:
+    return bool(request.config.getoption("--live"))
 
 
-# ============================================================================
-# GraphQL Query Fixtures
-# ============================================================================
+# ---------------------------------------------------------------------------
+# Fixture file paths
+# ---------------------------------------------------------------------------
+FIXTURES_DIR = Path(__file__).parent / "fixtures" / "generated"
+CASSETTE_PATH = FIXTURES_DIR / "graphql_cassette.json"
+SCHEMA_SDL_PATH = FIXTURES_DIR / "schema.graphql"
 
 
-@pytest.fixture
-def sample_query_string() -> str:
-    """Sample GraphQL query string for testing."""
-    return """
-    query testQuery {
-        target(ensemblId: "ENSG00000141510") {
-            id
-            approvedSymbol
-        }
-    }
+# ---------------------------------------------------------------------------
+# Cassette helpers
+# ---------------------------------------------------------------------------
+
+
+def _normalize(query: str) -> str:
+    return re.sub(r"\s+", " ", query.strip())
+
+
+def _load_cassette() -> list[dict]:
+    with CASSETTE_PATH.open() as f:
+        return json.load(f)["records"]
+
+
+def _cassette_lookup(cassette: list[dict], query: str, variables: dict | None) -> dict:
+    """Return the recorded response for the given query + variables pair.
+
+    Raises KeyError if no matching entry is found.
     """
+    norm = _normalize(query)
+    for entry in cassette:
+        if _normalize(entry["request"]["query"]) == norm and entry["request"]["variables"] == variables:
+            return entry["response"]
+    raise KeyError(
+        f"No cassette entry for query={norm!r} variables={variables!r}",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Low-level gql session mock
+# ---------------------------------------------------------------------------
+
+
+class CassetteSession:
+    """Async mock that replays responses from the cassette JSON file."""
+
+    def __init__(self, cassette: list[dict]) -> None:
+        self._cassette = cassette
+
+    async def execute(self, request: Any) -> dict:  # noqa: ANN401
+        from gql import GraphQLRequest
+        from gql.transport.exceptions import TransportQueryError
+        from graphql import print_ast
+
+        if isinstance(request, GraphQLRequest):
+            query_str = print_ast(request.document)
+            variables = request.variable_values or None
+        else:
+            query_str = str(request)
+            variables = None
+
+        response = _cassette_lookup(self._cassette, query_str, variables)
+        if "_error" in response:
+            import gql.transport.exceptions as _gql_exc
+
+            exc_cls = getattr(_gql_exc, response.get("_error_type", ""), TransportQueryError)
+            if not (isinstance(exc_cls, type) and issubclass(exc_cls, Exception)):
+                exc_cls = TransportQueryError
+            raise exc_cls(response["_error"])
+        return response
+
+
+# ---------------------------------------------------------------------------
+# Pytest fixtures
+# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
-def sample_variables() -> dict:
-    """Sample GraphQL query variables for testing."""
-    return {"ensemblId": "ENSG00000141510"}
+def cassette() -> list[dict]:
+    return _load_cassette()
 
 
 @pytest.fixture
-def sample_batch_variables() -> list[dict]:
-    """Sample batch query variables for testing."""
-    return [
-        {"ensemblId": "ENSG00000141510"},
-        {"ensemblId": "ENSG00000012048"},
-        {"ensemblId": "ENSG00000139618"},
-    ]
+def graphql_schema():
+    """Return a real GraphQLSchema object built from the captured SDL."""
+    sdl = SCHEMA_SDL_PATH.read_text(encoding="utf-8")
+    return build_schema(sdl)
+
+
+@pytest.fixture(autouse=True)
+def reset_graphql_runtime():
+    """Reset the global gql session between tests so mocks don't bleed."""
+    import open_targets_platform_mcp.client.graphql as gql_module
+
+    gql_module._runtime_state.session = None
+    gql_module._runtime_state.client = None
+    yield
+    gql_module._runtime_state.session = None
+    gql_module._runtime_state.client = None
 
 
 @pytest.fixture
-def sample_search_query() -> str:
-    """Sample search query GraphQL string."""
-    return """
-    query searchQuery($queryString: String!) {
-        search(queryString: $queryString) {
-            hits {
-                id
-                entity
-                name
-            }
-        }
-    }
+def mock_gql_session(live, cassette):
+    """Patch _get_global_graphql_session to return a CassetteSession.
+
+    When --live is passed the patch is skipped and the real session is used.
     """
+    if live:
+        yield None
+        return
 
-
-# ============================================================================
-# GraphQL Response Fixtures
-# ============================================================================
-
-
-@pytest.fixture
-def sample_graphql_response() -> dict:
-    """Sample successful GraphQL response."""
-    return {"target": {"id": "ENSG00000141510", "approvedSymbol": "TP53"}}
-
-
-@pytest.fixture
-def sample_search_response() -> dict:
-    """Sample search API response."""
-    return {
-        "search": {
-            "hits": [
-                {"id": "ENSG00000012048", "entity": "target", "name": "BRCA1"},
-                {"id": "EFO_0000305", "entity": "disease", "name": "breast carcinoma"},
-                {"id": "CHEMBL25", "entity": "drug", "name": "Aspirin"},
-            ],
-        },
-    }
+    session = CassetteSession(cassette)
+    with patch(
+        "open_targets_platform_mcp.client.graphql._get_global_graphql_session",
+        new=AsyncMock(return_value=session),
+    ):
+        yield session
 
 
 @pytest.fixture
-def sample_error_response() -> dict:
-    """Sample error response from GraphQL."""
-    return {"status": "error", "message": "Query execution failed"}
+def mock_schema_caches(live, graphql_schema):
+    """Pre-populate schema, type_graph, and category_subschemas caches.
 
-
-# ============================================================================
-# GraphQL Client Mock Fixtures
-# ============================================================================
-
-
-@pytest.fixture
-def mock_graphql_schema() -> GraphQLSchema:
-    """Mock GraphQL schema for testing."""
-    schema_definition = """
-    type Query {
-        target(ensemblId: String!): Target
-        disease(efoId: String!): Disease
-        drug(chemblId: String!): Drug
-        search(queryString: String!): SearchResult
-    }
-
-    type Target {
-        id: String!
-        approvedSymbol: String
-        approvedName: String
-    }
-
-    type Disease {
-        id: String!
-        name: String
-    }
-
-    type Drug {
-        id: String!
-        name: String
-    }
-
-    type SearchResult {
-        hits: [SearchHit]
-    }
-
-    type SearchHit {
-        id: String!
-        entity: String!
-        name: String
-    }
+    When --live is passed the caches are left empty so they fetch from the
+    real API on first access (the normal production path).
     """
-    return build_schema(schema_definition)
+    if live:
+        yield
+        return
+
+    from open_targets_platform_mcp.settings import settings
+    from open_targets_platform_mcp.tools.schema import caches
+    from open_targets_platform_mcp.tools.schema.helper import build_type_graph, load_categories
+    from open_targets_platform_mcp.tools.schema.helper.subschema import (
+        CategorySubschema,
+        CategorySubschemas,
+        build_category_subschema,
+    )
+
+    graph = build_type_graph(graphql_schema)
+    categories = load_categories()
+    depth = settings.subschema_depth
+
+    subschemas: dict[str, CategorySubschema] = {}
+    for name, data in categories.items():
+        subschemas[name] = build_category_subschema(name, data, graph, graphql_schema, depth)
+
+    caches.schema_cache.set(graphql_schema)
+    caches.type_graph_cache.set(graph)
+    caches.category_subschemas_cache.set(CategorySubschemas(subschemas=subschemas, depth=depth))
+
+    yield
+
+    caches.schema_cache.clear()
+    caches.type_graph_cache.clear()
+    caches.category_subschemas_cache.clear()
 
 
 @pytest.fixture
-def mock_graphql_client(sample_graphql_response, mock_graphql_schema):
-    """Mock GQL Client for testing."""
-    client = MagicMock()
-    client.execute.return_value = sample_graphql_response
-    client.schema = mock_graphql_schema
-    client.__enter__ = Mock(return_value=client)
-    client.__exit__ = Mock(return_value=False)
-    return client
+async def mcp_client_no_jq(mock_gql_session, mock_schema_caches):
+    """Open an in-process fastmcp Client with all mocks active.
 
-
-# ============================================================================
-# JQ Filter Fixtures
-# ============================================================================
-
-
-@pytest.fixture
-def simple_jq_filter() -> str:
-    """Simple jq filter for testing."""
-    return ".data.target"
-
-
-@pytest.fixture
-def complex_jq_filter() -> str:
-    """Complex jq filter for testing."""
-    return ".data.target | {id, symbol: .approvedSymbol}"
-
-
-# ============================================================================
-# Environment Variable Fixtures
-# ============================================================================
-
-
-@pytest.fixture
-def clean_env(monkeypatch):
-    """Remove all Open Targets Platform environment variables."""
-    env_vars = [
-        "OTP_MCP_API_ENDPOINT",
-        "OTP_MCP_SERVER_NAME",
-        "OTP_MCP_HTTP_HOST",
-        "OTP_MCP_HTTP_PORT",
-        "OTP_MCP_API_CALL_TIMEOUT",
-        "OTP_MCP_JQ_ENABLED",
-    ]
-    for var in env_vars:
-        monkeypatch.delenv(var, raising=False)
-
-
-@pytest.fixture
-def custom_env(monkeypatch):
-    """Set custom environment variables for testing."""
-    monkeypatch.setenv("OTP_MCP_API_ENDPOINT", "https://custom.api.test/graphql")
-    monkeypatch.setenv("OTP_MCP_SERVER_NAME", "Test Server")
-    monkeypatch.setenv("OTP_MCP_HTTP_HOST", "0.0.0.0")
-    monkeypatch.setenv("OTP_MCP_HTTP_PORT", "9000")
-    monkeypatch.setenv("OTP_MCP_API_CALL_TIMEOUT", "60")
-
-
-# ============================================================================
-# File System Fixtures
-# ============================================================================
-
-
-@pytest.fixture
-def sample_gql_file_content() -> str:
-    """Sample .gql file content with metadata."""
-    return """# Query Name: GetTargetInfo
-# Entity Type: target
-# Description: Retrieve basic information about a target
-# Variables: ensemblId (String!) - The ENSEMBL ID of the target
-# Pagination Behavior: None - single target query
-
-query GetTargetInfo($ensemblId: String!) {
-    target(ensemblId: $ensemblId) {
-        id
-        approvedSymbol
-        approvedName
-    }
-}
-"""
-
-
-@pytest.fixture
-def sample_category_descriptors() -> dict:
-    """Sample category descriptors mapping."""
-    return {
-        "target": "Queries related to genes and protein targets",
-        "disease": "Queries for disease and phenotype information",
-        "drug": "Queries for drug and molecule information",
-    }
-
-
-@pytest.fixture
-def sample_category_query_mapper() -> dict:
-    """Sample category to query mapping."""
-    return {
-        "target": ["GetTargetInfo", "GetTargetAssociations"],
-        "disease": ["GetDiseaseInfo", "GetDiseaseAssociations"],
-        "drug": ["GetDrugInfo", "GetDrugMechanisms"],
-    }
-
-
-# ============================================================================
-# Batch Query Fixtures
-# ============================================================================
-
-
-@pytest.fixture
-def batch_query_string() -> str:
-    """GraphQL query string for batch testing."""
-    return """
-    query GetTarget($ensemblId: String!) {
-        target(ensemblId: $ensemblId) {
-            id
-            approvedSymbol
-        }
-    }
+    Depends on both mock_gql_session and mock_schema_caches so that all tool
+    categories work correctly.  In live mode both mocks are no-ops.
     """
+    from fastmcp import Client
+
+    from open_targets_platform_mcp.create_server import create_server
+
+    server = await create_server()
+    async with Client(server) as client:
+        yield client
 
 
 @pytest.fixture
-def batch_variables_with_key() -> list[dict]:
-    """Batch variables with consistent key field."""
-    return [
-        {"ensemblId": "ENSG00000141510", "name": "TP53"},
-        {"ensemblId": "ENSG00000012048", "name": "BRCA1"},
-        {"ensemblId": "ENSG00000139618", "name": "BRCA2"},
-    ]
+async def mcp_client_jq(mock_gql_session, mock_schema_caches):
+    """Like mcp_client but with jq_enabled=True.
 
+    Used to test jq-specific tool behaviour through the MCP protocol.
+    """
+    from fastmcp import Client
 
-@pytest.fixture
-def batch_expected_results() -> dict:
-    """Expected batch query results."""
-    return {
-        "ENSG00000141510": {
-            "status": "success",
-            "data": {"target": {"id": "ENSG00000141510", "approvedSymbol": "TP53"}},
-        },
-        "ENSG00000012048": {
-            "status": "success",
-            "data": {"target": {"id": "ENSG00000012048", "approvedSymbol": "BRCA1"}},
-        },
-        "ENSG00000139618": {
-            "status": "success",
-            "data": {"target": {"id": "ENSG00000139618", "approvedSymbol": "BRCA2"}},
-        },
-    }
+    from open_targets_platform_mcp.create_server import create_server
+    from open_targets_platform_mcp.settings import settings
+
+    settings.jq_enabled = True
+    try:
+        server = await create_server()
+        async with Client(server) as client:
+            yield client
+    finally:
+        settings.jq_enabled = False
