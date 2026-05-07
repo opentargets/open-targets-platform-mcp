@@ -76,7 +76,10 @@ async def _run() -> None:
                 records.append(
                     {
                         "request": {"query": print_ast(request.document), "variables": variables},
-                        "response": {"_error": str(exc)},
+                        "response": {
+                            "_error": str(exc),
+                            "_error_type": type(exc).__qualname__,
+                        },
                     },
                 )
 

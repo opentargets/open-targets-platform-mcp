@@ -91,7 +91,12 @@ class CassetteSession:
 
         response = _cassette_lookup(self._cassette, query_str, variables)
         if "_error" in response:
-            raise TransportQueryError(response["_error"])
+            import gql.transport.exceptions as _gql_exc
+
+            exc_cls = getattr(_gql_exc, response.get("_error_type", ""), TransportQueryError)
+            if not (isinstance(exc_cls, type) and issubclass(exc_cls, Exception)):
+                exc_cls = TransportQueryError
+            raise exc_cls(response["_error"])
         return response
 
 
@@ -179,3 +184,39 @@ def mock_schema_caches(live, graphql_schema):
     caches.schema_cache.clear()
     caches.type_graph_cache.clear()
     caches.category_subschemas_cache.clear()
+
+
+@pytest.fixture
+async def mcp_client_no_jq(mock_gql_session, mock_schema_caches):
+    """Open an in-process fastmcp Client with all mocks active.
+
+    Depends on both mock_gql_session and mock_schema_caches so that all tool
+    categories work correctly.  In live mode both mocks are no-ops.
+    """
+    from fastmcp import Client
+
+    from open_targets_platform_mcp.create_server import create_server
+
+    server = await create_server()
+    async with Client(server) as client:
+        yield client
+
+
+@pytest.fixture
+async def mcp_client_jq(mock_gql_session, mock_schema_caches):
+    """Like mcp_client but with jq_enabled=True.
+
+    Used to test jq-specific tool behaviour through the MCP protocol.
+    """
+    from fastmcp import Client
+
+    from open_targets_platform_mcp.create_server import create_server
+    from open_targets_platform_mcp.settings import settings
+
+    settings.jq_enabled = True
+    try:
+        server = await create_server()
+        async with Client(server) as client:
+            yield client
+    finally:
+        settings.jq_enabled = False

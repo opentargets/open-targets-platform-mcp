@@ -410,11 +410,24 @@
     },
     {
       "request": {
+        "query": "query TargetQuery($ensemblId: String!) {\n  target(ensemblId: $ensemblId) {\n    id\n    approvedSymbol\n    approvedName\n  }\n}",
+        "variables": {
+          "ensemblId": 12345
+        }
+      },
+      "response": {
+        "_error": "{'message': \"Variable '$ensemblId' expected value of type 'String!' but got: 12345. Reason: String value expected (line 1, column 19):\\nquery TargetQuery($ensemblId: String!) {\\n                  ^\", 'locations': [{'line': 1, 'column': 19}]}",
+        "_error_type": "TransportQueryError"
+      }
+    },
+    {
+      "request": {
         "query": "{\n  nonExistentField\n}",
         "variables": null
       },
       "response": {
-        "_error": "{'message': \"Cannot query field 'nonExistentField' on type 'Query'. (line 2, column 3):\\n  nonExistentField\\n  ^\", 'locations': [{'line': 2, 'column': 3}]}"
+        "_error": "{'message': \"Cannot query field 'nonExistentField' on type 'Query'. (line 2, column 3):\\n  nonExistentField\\n  ^\", 'locations': [{'line': 2, 'column': 3}]}",
+        "_error_type": "TransportQueryError"
       }
     },
     {
@@ -425,7 +438,8 @@
         }
       },
       "response": {
-        "_error": "{'message': \"Variable '$ensemblId' of type 'Int!' used in position expecting type 'String!'. (line 1, column 19):\\nquery TargetQuery($ensemblId: Int!) {\\n                  ^\\n (line 2, column 21):\\n  target(ensemblId: $ensemblId) {\\n                    ^\", 'locations': [{'line': 1, 'column': 19}, {'line': 2, 'column': 21}]}"
+        "_error": "{'message': \"Variable '$ensemblId' of type 'Int!' used in position expecting type 'String!'. (line 1, column 19):\\nquery TargetQuery($ensemblId: Int!) {\\n                  ^\\n (line 2, column 21):\\n  target(ensemblId: $ensemblId) {\\n                    ^\", 'locations': [{'line': 1, 'column': 19}, {'line': 2, 'column': 21}]}",
+        "_error_type": "TransportQueryError"
       }
     }
   ]

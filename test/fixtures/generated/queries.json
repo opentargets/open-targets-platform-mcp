@@ -37,13 +37,19 @@
       "variables": { "queryString": "ibuprofen" }
     },
     {
+      "label": "target_ensemblid_value_is_int_not_string",
+      "query": "query TargetQuery($ensemblId: String!) { target(ensemblId: $ensemblId) { id approvedSymbol approvedName } }",
+      "variables": { "ensemblId": 12345 },
+      "expect_error": true
+    },
+    {
       "label": "invalid_unknown_field",
       "query": "query { nonExistentField }",
       "variables": null,
       "expect_error": true
     },
     {
-      "label": "invalid_wrong_variable_type",
+      "label": "target_ensemblid_declared_as_int_schema_expects_string",
       "query": "query TargetQuery($ensemblId: Int!) { target(ensemblId: $ensemblId) { id } }",
       "variables": { "ensemblId": 12345 },
       "expect_error": true

@@ -2,65 +2,75 @@
 
 from __future__ import annotations
 
-import pytest
+import json
 
-from open_targets_platform_mcp.model.search_entities_result import SearchEntitiesFoundEntity
-from open_targets_platform_mcp.tools.search_entities.search_entities import search_entities
+import pytest
 
 
 class TestSearchEntities:
     @pytest.mark.asyncio
-    async def test_single_query_returns_top_3_hits(self, mock_gql_session):
-        result = await search_entities(["BRCA1"])
+    async def test_single_query_returns_top_3_hits(self, mcp_client_no_jq):
+        result = await mcp_client_no_jq.call_tool("search_entities", {"query_strings": ["BRCA1"]})
+        data = json.loads(result.content[0].text)
 
-        assert "BRCA1" in result
-        hits = result["BRCA1"]
-        # At most 3 hits
+        assert "BRCA1" in data
+        hits = data["BRCA1"]
         assert len(hits) <= 3
-        # All are SearchEntitiesFoundEntity instances
-        assert all(isinstance(h, SearchEntitiesFoundEntity) for h in hits)
+        assert all(isinstance(h, dict) and "id" in h and "type" in h for h in hits)
 
     @pytest.mark.asyncio
-    async def test_brca1_top_hit_is_target(self, mock_gql_session):
-        result = await search_entities(["BRCA1"])
+    async def test_brca1_top_hit_is_target(self, mcp_client_no_jq):
+        result = await mcp_client_no_jq.call_tool("search_entities", {"query_strings": ["BRCA1"]})
+        data = json.loads(result.content[0].text)
 
-        first = result["BRCA1"][0]
-        assert first.id == "ENSG00000012048"
-        assert first.type == "target"
-
-    @pytest.mark.asyncio
-    async def test_aspirin_top_hit_is_drug(self, mock_gql_session):
-        result = await search_entities(["aspirin"])
-
-        first = result["aspirin"][0]
-        assert first.id == "CHEMBL25"
-        assert first.type == "drug"
+        first = data["BRCA1"][0]
+        assert first["id"] == "ENSG00000012048"
+        assert first["type"] == "target"
 
     @pytest.mark.asyncio
-    async def test_ibuprofen_top_hit_is_drug(self, mock_gql_session):
-        result = await search_entities(["ibuprofen"])
+    async def test_aspirin_top_hit_is_drug(self, mcp_client_no_jq):
+        result = await mcp_client_no_jq.call_tool("search_entities", {"query_strings": ["aspirin"]})
+        data = json.loads(result.content[0].text)
 
-        first = result["ibuprofen"][0]
-        assert first.id == "CHEMBL521"
-        assert first.type == "drug"
-
-    @pytest.mark.asyncio
-    async def test_multiple_queries_all_returned(self, mock_gql_session):
-        result = await search_entities(["BRCA1", "aspirin"])
-
-        assert set(result.keys()) == {"BRCA1", "aspirin"}
+        first = data["aspirin"][0]
+        assert first["id"] == "CHEMBL25"
+        assert first["type"] == "drug"
 
     @pytest.mark.asyncio
-    async def test_multiple_queries_correct_hits(self, mock_gql_session):
-        result = await search_entities(["BRCA1", "aspirin"])
+    async def test_ibuprofen_top_hit_is_drug(self, mcp_client_no_jq):
+        result = await mcp_client_no_jq.call_tool("search_entities", {"query_strings": ["ibuprofen"]})
+        data = json.loads(result.content[0].text)
 
-        assert result["BRCA1"][0].id == "ENSG00000012048"
-        assert result["aspirin"][0].id == "CHEMBL25"
+        first = data["ibuprofen"][0]
+        assert first["id"] == "CHEMBL521"
+        assert first["type"] == "drug"
 
     @pytest.mark.asyncio
-    async def test_entity_fields_are_non_empty_strings(self, mock_gql_session):
-        result = await search_entities(["ibuprofen"])
+    async def test_multiple_queries_all_returned(self, mcp_client_no_jq):
+        result = await mcp_client_no_jq.call_tool(
+            "search_entities",
+            {"query_strings": ["BRCA1", "aspirin"]},
+        )
+        data = json.loads(result.content[0].text)
 
-        for entity in result["ibuprofen"]:
-            assert isinstance(entity.id, str) and entity.id
-            assert isinstance(entity.type, str) and entity.type
+        assert set(data.keys()) == {"BRCA1", "aspirin"}
+
+    @pytest.mark.asyncio
+    async def test_multiple_queries_correct_hits(self, mcp_client_no_jq):
+        result = await mcp_client_no_jq.call_tool(
+            "search_entities",
+            {"query_strings": ["BRCA1", "aspirin"]},
+        )
+        data = json.loads(result.content[0].text)
+
+        assert data["BRCA1"][0]["id"] == "ENSG00000012048"
+        assert data["aspirin"][0]["id"] == "CHEMBL25"
+
+    @pytest.mark.asyncio
+    async def test_entity_fields_are_non_empty_strings(self, mcp_client_no_jq):
+        result = await mcp_client_no_jq.call_tool("search_entities", {"query_strings": ["ibuprofen"]})
+        data = json.loads(result.content[0].text)
+
+        for entity in data["ibuprofen"]:
+            assert isinstance(entity["id"], str) and entity["id"]
+            assert isinstance(entity["type"], str) and entity["type"]

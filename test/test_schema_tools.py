@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from fastmcp.exceptions import ToolError
-
-from open_targets_platform_mcp.tools.schema.schema import get_open_targets_graphql_schema
-from open_targets_platform_mcp.tools.schema.type_graph import get_type_dependencies
 
 # ---------------------------------------------------------------------------
 # get_open_targets_graphql_schema
@@ -15,62 +14,85 @@ from open_targets_platform_mcp.tools.schema.type_graph import get_type_dependenc
 
 class TestGetOpenTargetsGraphqlSchema:
     @pytest.mark.asyncio
-    async def test_valid_single_category_returns_sdl(self, mock_schema_caches):
-        result = await get_open_targets_graphql_schema(["clinical-genetics"])
+    async def test_valid_single_category_returns_sdl(self, mcp_client_no_jq):
+        result = await mcp_client_no_jq.call_tool(
+            "get_open_targets_graphql_schema",
+            {"categories": ["clinical-genetics"]},
+        )
 
-        assert isinstance(result, str)
-        assert len(result) > 0
-
-    @pytest.mark.asyncio
-    async def test_sdl_contains_expected_types(self, mock_schema_caches):
-        result = await get_open_targets_graphql_schema(["clinical-genetics"])
-
-        # clinical-genetics seeds include Disease and Target — they should appear
-        assert "type Disease" in result or "Disease" in result
-        assert "type Target" in result or "Target" in result
+        assert isinstance(result.content[0].text, str)
+        assert len(result.content[0].text) > 0
 
     @pytest.mark.asyncio
-    async def test_common_mistakes_guide_appended(self, mock_schema_caches):
-        result = await get_open_targets_graphql_schema(["clinical-genetics"])
+    async def test_sdl_contains_expected_types(self, mcp_client_no_jq):
+        result = await mcp_client_no_jq.call_tool(
+            "get_open_targets_graphql_schema",
+            {"categories": ["clinical-genetics"]},
+        )
+        sdl = result.content[0].text
 
-        # The common_mistakes_guide.md content always ends up appended
-        # It starts with a markdown heading
-        assert "#" in result
-
-    @pytest.mark.asyncio
-    async def test_valid_multiple_categories(self, mock_schema_caches):
-        result = await get_open_targets_graphql_schema(["clinical-genetics", "cancer-genomics"])
-
-        assert isinstance(result, str)
-        assert len(result) > 0
+        assert "Disease" in sdl
+        assert "Target" in sdl
 
     @pytest.mark.asyncio
-    async def test_invalid_category_raises_tool_error(self, mock_schema_caches):
+    async def test_common_mistakes_guide_appended(self, mcp_client_no_jq):
+        result = await mcp_client_no_jq.call_tool(
+            "get_open_targets_graphql_schema",
+            {"categories": ["clinical-genetics"]},
+        )
+
+        assert "#" in result.content[0].text
+
+    @pytest.mark.asyncio
+    async def test_valid_multiple_categories(self, mcp_client_no_jq):
+        result = await mcp_client_no_jq.call_tool(
+            "get_open_targets_graphql_schema",
+            {"categories": ["clinical-genetics", "cancer-genomics"]},
+        )
+
+        assert isinstance(result.content[0].text, str)
+        assert len(result.content[0].text) > 0
+
+    @pytest.mark.asyncio
+    async def test_invalid_category_raises_tool_error(self, mcp_client_no_jq):
         with pytest.raises(ToolError) as exc_info:
-            await get_open_targets_graphql_schema(["not-a-real-category"])
+            await mcp_client_no_jq.call_tool(
+                "get_open_targets_graphql_schema",
+                {"categories": ["not-a-real-category"]},
+            )
 
         assert "not-a-real-category" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_invalid_category_error_lists_valid_options(self, mock_schema_caches):
+    async def test_invalid_category_error_lists_valid_options(self, mcp_client_no_jq):
         with pytest.raises(ToolError) as exc_info:
-            await get_open_targets_graphql_schema(["bogus"])
+            await mcp_client_no_jq.call_tool(
+                "get_open_targets_graphql_schema",
+                {"categories": ["bogus"]},
+            )
 
-        # Error message should tell the caller what is available
         assert "clinical-genetics" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_mix_valid_and_invalid_raises_tool_error(self, mock_schema_caches):
+    async def test_mix_valid_and_invalid_raises_tool_error(self, mcp_client_no_jq):
         with pytest.raises(ToolError):
-            await get_open_targets_graphql_schema(["clinical-genetics", "bad-cat"])
+            await mcp_client_no_jq.call_tool(
+                "get_open_targets_graphql_schema",
+                {"categories": ["clinical-genetics", "bad-cat"]},
+            )
 
     @pytest.mark.asyncio
-    async def test_multiple_categories_produce_more_output_than_single(self, mock_schema_caches):
-        single = await get_open_targets_graphql_schema(["clinical-genetics"])
-        combined = await get_open_targets_graphql_schema(["clinical-genetics", "cancer-genomics"])
+    async def test_multiple_categories_produce_more_output_than_single(self, mcp_client_no_jq):
+        single = await mcp_client_no_jq.call_tool(
+            "get_open_targets_graphql_schema",
+            {"categories": ["clinical-genetics"]},
+        )
+        combined = await mcp_client_no_jq.call_tool(
+            "get_open_targets_graphql_schema",
+            {"categories": ["clinical-genetics", "cancer-genomics"]},
+        )
 
-        # Combined result must be at least as long
-        assert len(combined) >= len(single)
+        assert len(combined.content[0].text) >= len(single.content[0].text)
 
 
 # ---------------------------------------------------------------------------
@@ -80,52 +102,65 @@ class TestGetOpenTargetsGraphqlSchema:
 
 class TestGetTypeDependencies:
     @pytest.mark.asyncio
-    async def test_single_valid_type_returns_sdl(self, mock_schema_caches):
-        result = await get_type_dependencies(["Target"])
+    async def test_single_valid_type_returns_sdl(self, mcp_client_no_jq):
+        result = await mcp_client_no_jq.call_tool(
+            "get_type_dependencies",
+            {"type_names": ["Target"]},
+        )
+        data = json.loads(result.content[0].text)
 
-        assert isinstance(result, dict)
-        assert "Target" in result
-        assert isinstance(result["Target"], str)
-
-    @pytest.mark.asyncio
-    async def test_result_contains_shared_key(self, mock_schema_caches):
-        result = await get_type_dependencies(["Target"])
-
-        assert "shared" in result
+        assert isinstance(data, dict)
+        assert "Target" in data
+        assert isinstance(data["Target"], str)
 
     @pytest.mark.asyncio
-    async def test_two_types_shared_types_separated(self, mock_schema_caches):
-        result = await get_type_dependencies(["Target", "Drug"])
+    async def test_result_contains_shared_key(self, mcp_client_no_jq):
+        result = await mcp_client_no_jq.call_tool(
+            "get_type_dependencies",
+            {"type_names": ["Target"]},
+        )
+        data = json.loads(result.content[0].text)
 
-        # Both per-type keys present
-        assert "Target" in result
-        assert "Drug" in result
-        assert "shared" in result
+        assert "shared" in data
 
-        # A type should not appear in both a per-type SDL and shared SDL
-        # (basic sanity: no key appears in both Target-specific and shared)
-        target_sdl = result["Target"]
-        shared_sdl = result["shared"]
-        # Pagination is a common utility type — if present it belongs in shared
+    @pytest.mark.asyncio
+    async def test_two_types_shared_types_separated(self, mcp_client_no_jq):
+        result = await mcp_client_no_jq.call_tool(
+            "get_type_dependencies",
+            {"type_names": ["Target", "Drug"]},
+        )
+        data = json.loads(result.content[0].text)
+
+        assert "Target" in data
+        assert "Drug" in data
+        assert "shared" in data
+
+        target_sdl = data["Target"]
+        shared_sdl = data["shared"]
         if "Pagination" in shared_sdl:
             assert "Pagination" not in target_sdl
 
     @pytest.mark.asyncio
-    async def test_invalid_type_raises_tool_error(self, mock_schema_caches):
+    async def test_invalid_type_raises_tool_error(self, mcp_client_no_jq):
         with pytest.raises(ToolError) as exc_info:
-            await get_type_dependencies(["NotARealType"])
+            await mcp_client_no_jq.call_tool(
+                "get_type_dependencies",
+                {"type_names": ["NotARealType"]},
+            )
 
         assert "NotARealType" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_invalid_type_error_suggests_similar(self, mock_schema_caches):
+    async def test_invalid_type_error_suggests_similar(self, mcp_client_no_jq):
         with pytest.raises(ToolError) as exc_info:
-            await get_type_dependencies(["Targ"])  # close to "Target"
+            await mcp_client_no_jq.call_tool("get_type_dependencies", {"type_names": ["Targ"]})
 
-        # Should suggest similar types in the error message
         assert "Target" in str(exc_info.value) or "Similar" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_mix_valid_and_invalid_raises_tool_error(self, mock_schema_caches):
+    async def test_mix_valid_and_invalid_raises_tool_error(self, mcp_client_no_jq):
         with pytest.raises(ToolError):
-            await get_type_dependencies(["Target", "AbsolutelyFakeType"])
+            await mcp_client_no_jq.call_tool(
+                "get_type_dependencies",
+                {"type_names": ["Target", "AbsolutelyFakeType"]},
+            )
