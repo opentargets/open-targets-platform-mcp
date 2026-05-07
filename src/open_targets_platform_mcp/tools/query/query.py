@@ -2,10 +2,9 @@
 
 from typing import Annotated, Any
 
-from pydantic import Field
-
 from open_targets_platform_mcp.client import execute_graphql_query
-from open_targets_platform_mcp.model.result import QueryResult
+from open_targets_platform_mcp.helper import clone_function_with_removed_parameter
+from open_targets_platform_mcp.model.query_result import QueryResult
 
 
 async def _query_impl(
@@ -13,40 +12,29 @@ async def _query_impl(
     variables: dict[str, Any] | None = None,
     jq_filter: str | None = None,
 ) -> QueryResult:
-    return await execute_graphql_query(
-        query_string,
-        variables,
-        jq_filter=jq_filter,
-    )
+    return await execute_graphql_query(query_string, variables, jq_filter=jq_filter)
 
 
 async def query_with_jq(
     query_string: Annotated[
         str,
-        Field(description="GraphQL query string starting with 'query' keyword"),
+        "GraphQL query string starting with 'query' keyword.",
     ],
     variables: Annotated[
         dict[str, Any] | None,
-        Field(description="Optional variables for the GraphQL query"),
+        "Optional dict or JSON string with query variables.",
     ] = None,
     jq_filter: Annotated[
         str | None,
-        Field(description="Optional jq filter to pre-filter the JSON response server-side"),
+        "Optional jq filter to pre-filter the JSON response server-side. "
+        "Always use null coalescing (`//`) to handle null or missing values gracefully, "
+        'for example: `// empty`, `// []`, `// {}`, `// ""`, or any other sensible default.',
     ] = None,
-) -> QueryResult:
-    """Query with jq support - signature includes jq_filter."""
+) -> Annotated[
+    QueryResult,
+    "GraphQL response with data field containing targets, diseases, drugs, variants, studies or error message.",
+]:
     return await _query_impl(query_string, variables, jq_filter)
 
 
-async def query_without_jq(
-    query_string: Annotated[
-        str,
-        Field(description="GraphQL query string starting with 'query' keyword"),
-    ],
-    variables: Annotated[
-        dict[str, Any] | None,
-        Field(description="Optional variables for the GraphQL query"),
-    ] = None,
-) -> QueryResult:
-    """Query without jq support - signature excludes jq_filter."""
-    return await _query_impl(query_string, variables)
+query_without_jq = clone_function_with_removed_parameter(query_with_jq, "jq_filter")

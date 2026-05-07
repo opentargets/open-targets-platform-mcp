@@ -1,26 +1,23 @@
 import asyncio
-from importlib import metadata
 from typing import Annotated
 
 import typer
 from starlette.middleware import Middleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from open_targets_platform_mcp import __dist_name__, __version__
 from open_targets_platform_mcp.create_server import create_server
 from open_targets_platform_mcp.settings import TransportType, settings
 
-PACKAGE_NAME = "open_targets_platform_mcp"
-PACKAGE_VERSION = metadata.version(PACKAGE_NAME)
-
 app = typer.Typer(
-    help=f"Model Context Protocol server for Open Targets Platform version {PACKAGE_VERSION}",
+    help=f"Model Context Protocol server for Open Targets Platform version {__version__}",
 )
 
 
 def _version_callback(value: bool) -> None:
-    """Show the package version and exit."""
+    """Show the application version and exit."""
     if value:
-        typer.echo(f"{PACKAGE_NAME} {PACKAGE_VERSION}")
+        typer.echo(f"{__dist_name__} {__version__}")
         raise typer.Exit
 
 

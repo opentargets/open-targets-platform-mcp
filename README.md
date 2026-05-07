@@ -236,62 +236,25 @@ This significantly reduces token consumption by returning only the requested fie
 
 For detailed instructions on configuring the Open Targets Platform MCP server with Claude Desktop, including both remote hosted service and local installation configurations, see [CLAUDE_DESKTOP.md](CLAUDE_DESKTOP.md).
 
-## Project Structure
-
-```
-open-targets-platform-mcp/
-├── src/open_targets_platform_mcp/
-│   ├── __init__.py          # Package initialization
-│   ├── cli.py               # Command-line interface
-│   ├── create_server.py     # MCP server creation and setup
-│   ├── server.py            # FastMCP server instance
-│   ├── settings.py          # Configuration management (pydantic-settings)
-│   ├── types.py             # Type definitions (TransportType, etc.)
-│   ├── client/              # GraphQL client utilities
-│   │   ├── __init__.py
-│   │   └── graphql.py       # GraphQL client implementation
-│   ├── model/               # Data models
-│   │   └── result.py        # Query result models
-│   ├── tools/               # MCP tools (organized by feature)
-│   │   ├── __init__.py      # Tool exports
-│   │   ├── schema/          # Schema fetching tool
-│   │   │   ├── schema.py    # Main schema tool implementation
-│   │   │   ├── type_graph.py # Type relationships graph exploration tool
-│   │   │   ├── caches.py    # Schema caching and pre-fetching
-│   │   │   ├── helper/      # Schema/subschema building helpers
-│   │   │   └── common_mistakes_guide.txt
-│   │   ├── query/           # Query execution tool
-│   │   │   ├── query.py
-│   │   │   ├── with_jq_description.txt
-│   │   │   └── without_jq_description.txt
-│   │   ├── batch_query/     # Batch query tool
-│   │   │   ├── batch_query.py
-│   │   │   ├── with_jq_description.txt
-│   │   │   └── without_jq_description.txt
-│   │   └── search_entities/ # Entity search tool
-│   │       ├── search_entities.py
-│   │       └── description.txt
-│   ├── static/              # Static assets for Homepage/UI
-│   │   ├── favicon.png
-│   │   └── logo.png
-│   └── templates/           # HTML templates
-│       └── homepage.html
-├── test/                    # Test suite
-│   ├── conftest.py
-│   ├── test_client/
-│   │   └── test_graphql.py
-│   ├── test_tools/
-│   │   ├── test_schema.py
-│   │   ├── test_query.py
-│   │   └── test_batch_query.py
-│   ├── test_config.py
-│   └── test_server.py
-└── pyproject.toml           # Project configuration and dependencies
-```
-
 ## Testing
 
-> **Note**: The test suite is currently AI-generated and will be reviewed and refined in the near future.
+The test suite is built around two guiding principles:
+
+**1. Test at the highest meaningful level.**
+Tests exercise the server through the [fastmcp](https://gofastmcp.com/) in-process client (`Client.call_tool()`), the same interface an LLM uses at runtime. This makes every test a near-system test: tool registration, argument validation, description generation, and response serialisation are all covered as a single end-to-end path, rather than testing internal functions in isolation.
+
+**2. Use GraphQL replay instead of live network calls.**
+Real API responses are recorded once into a cassette file (`test/fixtures/generated/graphql_cassette.json`) by running the generator script against the live API. During normal test runs the cassette is replayed deterministically, so tests are fast, reproducible, and do not depend on network availability. The cassette is regenerated intentionally when new queries are needed:
+
+```bash
+uv run python test/fixtures/generated/generate_fixtures.py
+```
+
+To run tests against the live API instead of the cassette:
+
+```bash
+uv run python -m pytest --live
+```
 
 ## Contributing
 

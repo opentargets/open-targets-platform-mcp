@@ -3,6 +3,7 @@
 from importlib import resources
 from typing import Annotated
 
+from fastmcp.exceptions import ToolError
 from pydantic import Field
 
 from open_targets_platform_mcp.tools.schema.caches import category_subschemas_cache, schema_cache
@@ -15,9 +16,14 @@ async def get_open_targets_graphql_schema(
         Field(
             description="List of category names to filter the schema. "
             "Returns only types relevant to the specified categories.",
+            min_length=1,
+            examples=[["drug-mechanisms"], ["target-safety", "drug-safety"]],
         ),
     ],
-) -> str:
+) -> Annotated[
+    str,
+    "The schema text in SDL (Schema Definition Language) format.",
+]:
     """Retrieve the Open Targets Platform GraphQL schema by category."""
     # Get subschemas for requested categories
     subschemas = await category_subschemas_cache.get()
@@ -30,7 +36,7 @@ async def get_open_targets_graphql_schema(
             f"Invalid category name(s): {', '.join(invalid_categories)}. "
             f"Available categories: {', '.join(available_categories)}"
         )
-        raise ValueError(msg)
+        raise ToolError(msg)
 
     # Collect all types from requested categories
     all_types: set[str] = set()
@@ -44,7 +50,7 @@ async def get_open_targets_graphql_schema(
     # Append common mistakes guide
     common_mistakes_guide = (
         resources.files("open_targets_platform_mcp.tools.schema")
-        .joinpath("common_mistakes_guide.txt")
+        .joinpath("common_mistakes_guide.md")
         .read_text(encoding="utf-8")
     )
     return sdl + "\n" + common_mistakes_guide
@@ -77,11 +83,8 @@ def build_schema_docstring() -> str:
     """
     base_docstring = (
         resources.files("open_targets_platform_mcp.tools.schema")
-        .joinpath("schema_docstring_prefix.txt")
+        .joinpath("schema_docstring_prefix.md")
         .read_text(encoding="utf-8")
     )
     categories = get_categories_for_docstring()
-    return f"{base_docstring}\n{categories}\n"
-
-
-get_open_targets_graphql_schema.__doc__ = build_schema_docstring()
+    return f"{base_docstring}\n\n{categories}\n"
